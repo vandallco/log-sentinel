@@ -117,13 +117,14 @@
 /* ── COMPANY PANEL WRAPPER (slide-down) ── */
 
 .company-panel-wrap {
-  max-height: 0;
   overflow: hidden;
+  max-height: 0;
   transition: max-height 0.35s ease;
 }
 
 .company-panel-wrap.open {
-  max-height: 60vh;
+  max-height: 2000px;
+  overflow: visible;
 }
 
 /* ── COMPANY PANEL ── */
@@ -132,6 +133,7 @@
   background: var(--soc-panel);
   border-bottom: 1px solid var(--soc-border);
   padding: 1.25rem 1.5rem;
+  max-height: 55vh;
   overflow-y: auto;
 }
 
