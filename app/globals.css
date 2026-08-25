@@ -269,3 +269,20 @@ footer {
   font-size: 0.7rem;
   text-align: center;
 }
+
+.soc-link {
+  margin-left: auto;
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  color: white;
+  text-decoration: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+  transition: filter 0.15s;
+}
+
+.soc-link:hover {
+  filter: brightness(1.15);
+}

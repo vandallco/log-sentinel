@@ -46,6 +46,9 @@ export default function Home() {
             puertos · todo se procesa en tu navegador
           </p>
         </div>
+        <a href="/soc" className="soc-link">
+          SOC Lab →
+        </a>
       </header>
 
       <section className="panel">
