@@ -575,16 +575,137 @@
   justify-content: space-between;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--soc-border);
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
-.log-panel-header h3 {
+.log-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.log-panel-title h3 {
   font-size: 0.78rem;
   margin: 0;
+}
+
+.log-panel-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .log-panel-count {
   font-size: 0.62rem;
   color: var(--soc-muted);
+}
+
+.live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--soc-ok);
+}
+
+.live-indicator.paused {
+  color: var(--soc-medium);
+}
+
+.live-indicator.done {
+  color: var(--soc-muted);
+}
+
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--soc-ok);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.live-indicator.paused .live-dot {
+  background: var(--soc-medium);
+  animation: none;
+}
+
+.live-indicator.done .live-dot {
+  background: var(--soc-muted);
+  animation: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+.log-ctrl-btn {
+  background: var(--soc-card);
+  border: 1px solid var(--soc-border);
+  color: var(--soc-muted);
+  font-size: 0.65rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  line-height: 1;
+}
+
+.log-ctrl-btn:hover {
+  color: var(--soc-text);
+  border-color: var(--soc-muted);
+}
+
+.log-ctrl-btn.skip {
+  font-size: 0.75rem;
+}
+
+.speed-selector {
+  display: flex;
+  gap: 2px;
+  background: var(--soc-card);
+  border: 1px solid var(--soc-border);
+  border-radius: 4px;
+  padding: 1px;
+}
+
+.speed-btn {
+  background: transparent;
+  border: none;
+  color: var(--soc-muted);
+  font-size: 0.55rem;
+  font-family: inherit;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.speed-btn.active {
+  background: var(--soc-accent);
+  color: #04252b;
+}
+
+.speed-btn:hover:not(.active) {
+  color: var(--soc-text);
+}
+
+.log-waiting {
+  padding: 3rem;
+  text-align: center;
+  color: var(--soc-muted);
+  font-size: 0.75rem;
+  animation: pulse-text 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-text {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .log-entries {
@@ -597,6 +718,15 @@
   border-bottom: 1px solid rgba(30, 42, 56, 0.5);
   font-size: 0.68rem;
   transition: background 0.1s;
+}
+
+.log-entry.newest {
+  animation: log-in 0.3s ease-out;
+}
+
+@keyframes log-in {
+  from { opacity: 0; transform: translateY(6px); background: rgba(34, 211, 238, 0.06); }
+  to { opacity: 1; transform: translateY(0); background: transparent; }
 }
 
 .log-entry:hover {
