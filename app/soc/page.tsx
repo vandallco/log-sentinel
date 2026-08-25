@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { COMPANY } from "../../lib/company";
 import { SCENARIOS, type Scenario, type Option, type LogEntry } from "../../lib/scenarios";
 
 type View = "dashboard" | "investigation";
 type StepId = "identify" | "assign" | "playbook" | "classify" | "writeup" | "return";
+type LogFilter = "all" | "flagged" | "warning" | "critical";
 
 const STEP_ORDER: StepId[] = ["identify", "assign", "playbook", "classify", "writeup", "return"];
 const STEP_LABELS: Record<StepId, string> = { identify: "Identificar logs", assign: "Asignar caso", playbook: "Consultar playbook", classify: "Clasificar", writeup: "Redactar reporte", return: "Volver al panel" };
@@ -23,6 +24,9 @@ export default function SOCPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [speed, setSpeed] = useState(400);
+  const [logFilter, setLogFilter] = useState<LogFilter>("all");
+  const [logSearch, setLogSearch] = useState("");
+  const [stepAnimating, setStepAnimating] = useState(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const userScrolledUp = useRef(false);
   const streamingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -30,9 +34,22 @@ export default function SOCPage() {
   const allLogs = selectedScenario?.logs ?? [];
   const visibleLogs = allLogs.slice(0, visibleCount);
 
+  const filteredLogs = useMemo(() => {
+    let logs = visibleLogs;
+    if (logFilter === "flagged") logs = logs.filter((l) => l.flagged);
+    else if (logFilter === "warning") logs = logs.filter((l) => l.severity === "warning");
+    else if (logFilter === "critical") logs = logs.filter((l) => l.severity === "critical" || l.flagged);
+    if (logSearch.trim()) {
+      const q = logSearch.toLowerCase();
+      logs = logs.filter((l) => l.message.toLowerCase().includes(q) || l.source.toLowerCase().includes(q) || l.timestamp.toLowerCase().includes(q));
+    }
+    return logs;
+  }, [visibleLogs, logFilter, logSearch]);
+
   useEffect(() => {
     if (!isStreaming || isPaused || visibleCount >= allLogs.length) {
       if (streamingRef.current) clearInterval(streamingRef.current);
+      if (visibleCount >= allLogs.length && isStreaming) setIsStreaming(false);
       return;
     }
     streamingRef.current = setInterval(() => {
@@ -61,6 +78,29 @@ export default function SOCPage() {
     userScrolledUp.current = !atBottom;
   }, []);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (view !== "investigation") return;
+      if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return;
+      if (e.code === "Space") { e.preventDefault(); setIsPaused((p) => !p); }
+      if (e.code === "ArrowRight" || e.code === "Enter") {
+        const idx = STEP_ORDER.indexOf(currentStep);
+        if (answers[currentStep] && idx < STEP_ORDER.length - 1) {
+          setStepAnimating(true);
+          setTimeout(() => { setCurrentStep(STEP_ORDER[idx + 1]); setStepAnimating(false); }, 150);
+        }
+      }
+      if (e.code === "ArrowLeft") {
+        const idx = STEP_ORDER.indexOf(currentStep);
+        if (idx > 0) { setStepAnimating(true); setTimeout(() => { setCurrentStep(STEP_ORDER[idx - 1]); setStepAnimating(false); }, 150); }
+      }
+      if (e.code === "Escape") resetToDashboard();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [view, currentStep, answers]);
+
   const startInvestigation = (scenario: Scenario) => {
     setSelectedScenario(scenario);
     setCurrentStep("identify");
@@ -70,6 +110,8 @@ export default function SOCPage() {
     setVisibleCount(0);
     setIsStreaming(true);
     setIsPaused(false);
+    setLogFilter("all");
+    setLogSearch("");
     userScrolledUp.current = false;
     setView("investigation");
   };
@@ -81,13 +123,13 @@ export default function SOCPage() {
 
   const goNext = () => {
     const idx = STEP_ORDER.indexOf(currentStep);
-    if (idx < STEP_ORDER.length - 1) setCurrentStep(STEP_ORDER[idx + 1]);
+    if (idx < STEP_ORDER.length - 1) { setStepAnimating(true); setTimeout(() => { setCurrentStep(STEP_ORDER[idx + 1]); setStepAnimating(false); }, 150); }
     else setCompleted(true);
   };
 
   const goBack = () => {
     const idx = STEP_ORDER.indexOf(currentStep);
-    if (idx > 0) setCurrentStep(STEP_ORDER[idx - 1]);
+    if (idx > 0) { setStepAnimating(true); setTimeout(() => { setCurrentStep(STEP_ORDER[idx - 1]); setStepAnimating(false); }, 150); }
   };
 
   const resetToDashboard = () => {
@@ -100,6 +142,8 @@ export default function SOCPage() {
     setVisibleCount(0);
     setIsStreaming(false);
     setIsPaused(false);
+    setLogFilter("all");
+    setLogSearch("");
     if (streamingRef.current) clearInterval(streamingRef.current);
   };
 
@@ -111,6 +155,7 @@ export default function SOCPage() {
 
   const currentStepData = selectedScenario?.steps.find((s) => s.id === currentStep);
   const currentAnswer = currentStep ? answers[currentStep] : null;
+  const stepIdx = STEP_ORDER.indexOf(currentStep);
 
   return (
     <div className="soc">
@@ -132,7 +177,9 @@ export default function SOCPage() {
         </div>
       </header>
 
-      {showCompany && <CompanyPanel />}
+      <div className={`company-panel-wrap ${showCompany ? "open" : ""}`}>
+        <CompanyPanel />
+      </div>
 
       {view === "dashboard" && <Dashboard onSelect={startInvestigation} />}
 
@@ -142,28 +189,47 @@ export default function SOCPage() {
           <div className="investigation-body">
             <div className="investigation-left">
               <ProgressBar steps={STEP_ORDER} current={currentStep} answers={answers} />
-              {currentStepData && (
-                <StepCard step={currentStepData} answer={currentAnswer} onAnswer={(opt) => handleAnswer(currentStep, opt)} />
-              )}
+              <div className={`step-card-wrap ${stepAnimating ? "slide-out" : "slide-in"}`}>
+                {currentStepData && (
+                  <StepCard
+                    step={currentStepData}
+                    stepNum={stepIdx + 1}
+                    totalSteps={STEP_ORDER.length}
+                    answer={currentAnswer}
+                    onAnswer={(opt) => handleAnswer(currentStep, opt)}
+                  />
+                )}
+              </div>
               <div className="investigation-nav">
-                <button className="soc-btn ghost" onClick={goBack} disabled={STEP_ORDER.indexOf(currentStep) === 0}>Anterior</button>
-                <button className="soc-btn primary" onClick={goNext} disabled={!currentAnswer}>
-                  {STEP_ORDER.indexOf(currentStep) === STEP_ORDER.length - 1 ? "Finalizar" : "Siguiente"}
+                <button className="soc-btn ghost" onClick={goBack} disabled={stepIdx === 0}>
+                  ← Anterior
                 </button>
+                <span className="nav-hint">{stepIdx + 1} de {STEP_ORDER.length}</span>
+                <button className="soc-btn primary" onClick={goNext} disabled={!currentAnswer}>
+                  {stepIdx === STEP_ORDER.length - 1 ? "Finalizar ✓" : "Siguiente →"}
+                </button>
+              </div>
+              <div className="keyboard-hint">
+                <kbd>Espacio</kbd> pausa · <kbd>←</kbd><kbd>→</kbd> navegar · <kbd>Esc</kbd> salir
               </div>
             </div>
             <div className="investigation-right">
               <LogPanel
-                logs={visibleLogs}
+                logs={filteredLogs}
+                allVisible={visibleLogs}
                 totalLogs={allLogs.length}
                 isStreaming={isStreaming}
                 isPaused={isPaused}
                 speed={speed}
+                logFilter={logFilter}
+                logSearch={logSearch}
                 containerRef={logContainerRef}
                 onScroll={handleScroll}
                 onPauseToggle={() => setIsPaused(!isPaused)}
                 onSpeedChange={setSpeed}
                 onSkip={skipToEnd}
+                onFilterChange={setLogFilter}
+                onSearchChange={setLogSearch}
               />
             </div>
           </div>
@@ -179,23 +245,31 @@ export default function SOCPage() {
 /* ── STREAMING LOG PANEL ── */
 
 function LogPanel({
-  logs, totalLogs, isStreaming, isPaused, speed, containerRef, onScroll,
-  onPauseToggle, onSpeedChange, onSkip,
+  logs, allVisible, totalLogs, isStreaming, isPaused, speed, logFilter, logSearch,
+  containerRef, onScroll, onPauseToggle, onSpeedChange, onSkip, onFilterChange, onSearchChange,
 }: {
-  logs: LogEntry[];
-  totalLogs: number;
-  isStreaming: boolean;
-  isPaused: boolean;
-  speed: number;
+  logs: LogEntry[]; allVisible: LogEntry[]; totalLogs: number;
+  isStreaming: boolean; isPaused: boolean; speed: number;
+  logFilter: LogFilter; logSearch: string;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  onScroll: () => void;
-  onPauseToggle: () => void;
-  onSpeedChange: (s: number) => void;
-  onSkip: () => void;
+  onScroll: () => void; onPauseToggle: () => void;
+  onSpeedChange: (s: number) => void; onSkip: () => void;
+  onFilterChange: (f: LogFilter) => void; onSearchChange: (s: string) => void;
 }) {
-  const flaggedCount = logs.filter((l) => l.flagged).length;
-  const isDone = logs.length >= totalLogs;
+  const flaggedCount = allVisible.filter((l) => l.flagged).length;
+  const warnCount = allVisible.filter((l) => l.severity === "warning").length;
+  const critCount = allVisible.filter((l) => l.severity === "critical").length;
+  const isDone = allVisible.length >= totalLogs;
   const speeds = [800, 400, 200, 80, 30];
+  const progress = totalLogs > 0 ? (allVisible.length / totalLogs) * 100 : 0;
+  const lastTimestamp = allVisible.length > 0 ? allVisible[allVisible.length - 1].timestamp : "";
+
+  const filters: { key: LogFilter; label: string; count: number }[] = [
+    { key: "all", label: "Todos", count: allVisible.length },
+    { key: "flagged", label: "Marcados", count: flaggedCount },
+    { key: "warning", label: "Warnings", count: warnCount },
+    { key: "critical", label: "Críticos", count: critCount },
+  ];
 
   return (
     <div className="log-panel">
@@ -211,10 +285,11 @@ function LogPanel({
           {isDone && <span className="live-indicator done">COMPLETO</span>}
         </div>
         <div className="log-panel-controls">
-          <span className="log-panel-count">{logs.length}/{totalLogs} · {flaggedCount} marcados</span>
+          {lastTimestamp && <span className="log-timestamp-current">{lastTimestamp}</span>}
+          <span className="log-panel-count">{allVisible.length}/{totalLogs}</span>
           {isStreaming && (
             <>
-              <button className="log-ctrl-btn" onClick={onPauseToggle} title={isPaused ? "Reanudar" : "Pausar"}>
+              <button className="log-ctrl-btn" onClick={onPauseToggle} title={isPaused ? "Reanudar (Espacio)" : "Pausar (Espacio)"}>
                 {isPaused ? "▶" : "❚❚"}
               </button>
               <div className="speed-selector">
@@ -224,14 +299,32 @@ function LogPanel({
                   </button>
                 ))}
               </div>
-              <button className="log-ctrl-btn skip" onClick={onSkip} title="Saltar al final">⏩</button>
+              <button className="log-ctrl-btn skip" onClick={onSkip} title="Skip to end">⏩</button>
             </>
           )}
         </div>
       </div>
+
+      {!isDone && isStreaming && (
+        <div className="log-progress-bar">
+          <div className="log-progress-fill" style={{ width: `${progress}%` }} />
+        </div>
+      )}
+
+      <div className="log-filters">
+        <div className="log-filter-tabs">
+          {filters.map((f) => (
+            <button key={f.key} className={`log-filter-tab ${logFilter === f.key ? "active" : ""}`} onClick={() => onFilterChange(f.key)}>
+              {f.label} <span className="filter-count">{f.count}</span>
+            </button>
+          ))}
+        </div>
+        <input className="log-search" type="text" placeholder="Buscar en logs..." value={logSearch} onChange={(e) => onSearchChange(e.target.value)} />
+      </div>
+
       <div className="log-entries" ref={containerRef} onScroll={onScroll}>
-        {logs.map((log) => (
-          <div key={log.line} className={`log-entry ${log.severity} ${log.flagged ? "flagged" : ""} ${log.line === logs.length ? "newest" : ""}`}>
+        {logs.map((log, i) => (
+          <div key={log.line} className={`log-entry ${log.severity} ${log.flagged ? "flagged" : ""} ${i === logs.length - 1 && allVisible.length === visibleCount(allVisible, log) ? "newest" : ""}`}>
             <div className="log-entry-header">
               <span className="log-line">#{log.line}</span>
               <span className="log-timestamp">{log.timestamp}</span>
@@ -241,13 +334,21 @@ function LogPanel({
             <div className="log-message">{log.message}</div>
           </div>
         ))}
-        {!isDone && logs.length === 0 && (
-          <div className="log-waiting">Esperando logs...</div>
+        {logs.length === 0 && allVisible.length === 0 && !isDone && (
+          <div className="log-waiting">
+            <div className="log-waiting-spinner" />
+            Esperando logs del servidor...
+          </div>
+        )}
+        {logs.length === 0 && allVisible.length > 0 && (
+          <div className="log-empty-filter">Ningún log coincide con el filtro actual</div>
         )}
       </div>
     </div>
   );
 }
+
+function visibleCount(arr: unknown[], _item: unknown) { return arr.length; }
 
 /* ── COMPANY PANEL ── */
 
@@ -334,10 +435,11 @@ function Dashboard({ onSelect }: { onSelect: (s: Scenario) => void }) {
             <h3>{s.title}</h3>
             <p>{s.description}</p>
             <div className="scenario-card-footer">
-              <span>{s.alertTime}</span>
-              <span>{s.logs.length} logs</span>
-              <span>{s.steps.length} pasos</span>
+              <span>🕐 {s.alertTime}</span>
+              <span>📋 {s.logs.length} logs</span>
+              <span>🔍 {s.steps.length} pasos</span>
             </div>
+            <div className="scenario-card-cta">Iniciar investigación →</div>
           </div>
         ))}
       </div>
@@ -353,7 +455,7 @@ function ScenarioHeader({ scenario }: { scenario: Scenario }) {
       <div className="scenario-header-top">
         <span className={`severity-badge ${scenario.severity}`}>{scenario.severity.toUpperCase()}</span>
         <span className="scenario-header-source">{scenario.alertSource}</span>
-        <span className="scenario-header-time">{scenario.alertTime}</span>
+        <span className="scenario-header-time">🕐 {scenario.alertTime}</span>
       </div>
       <h2>{scenario.title}</h2>
       <p>{scenario.description}</p>
@@ -366,7 +468,7 @@ function ScenarioHeader({ scenario }: { scenario: Scenario }) {
 function ProgressBar({ steps, current, answers }: { steps: StepId[]; current: StepId; answers: Record<string, Option | null> }) {
   return (
     <div className="progress-bar">
-      {steps.map((stepId) => {
+      {steps.map((stepId, i) => {
         const isActive = stepId === current;
         const isDone = !!answers[stepId];
         const isCorrect = answers[stepId]?.correct ?? false;
@@ -374,6 +476,7 @@ function ProgressBar({ steps, current, answers }: { steps: StepId[]; current: St
           <div key={stepId} className={`progress-step ${isActive ? "active" : ""} ${isDone ? "done" : ""} ${isDone && !isCorrect ? "wrong" : ""}`}>
             <div className="progress-step-number">{isDone ? (isCorrect ? "✓" : "✗") : STEP_ICONS[stepId]}</div>
             <div className="progress-step-label">{STEP_LABELS[stepId]}</div>
+            {i < steps.length - 1 && <div className={`progress-connector ${isDone ? "filled" : ""}`} />}
           </div>
         );
       })}
@@ -383,27 +486,34 @@ function ProgressBar({ steps, current, answers }: { steps: StepId[]; current: St
 
 /* ── STEP CARD ── */
 
-function StepCard({ step, answer, onAnswer }: {
+function StepCard({ step, stepNum, totalSteps, answer, onAnswer }: {
   step: { id: string; title: string; description: string; hint: string; options: Option[] };
-  answer: Option | null;
-  onAnswer: (opt: Option) => void;
+  stepNum: number; totalSteps: number;
+  answer: Option | null; onAnswer: (opt: Option) => void;
 }) {
   return (
     <div className="step-card">
+      <div className="step-card-header">
+        <span className="step-counter">Paso {stepNum}/{totalSteps}</span>
+      </div>
       <h3>{step.title}</h3>
       <p className="step-description">{step.description}</p>
       <div className="step-hint">{step.hint}</div>
       <div className="step-options">
-        {step.options.map((opt) => {
+        {step.options.map((opt, i) => {
           const isSelected = answer?.id === opt.id;
           const showResult = !!answer;
           return (
             <button key={opt.id} className={`step-option ${isSelected ? "selected" : ""} ${showResult && opt.correct ? "correct" : ""} ${showResult && isSelected && !opt.correct ? "wrong" : ""}`}
-              onClick={() => !answer && onAnswer(opt)} disabled={!!answer}>
-              <span className="step-option-label">{opt.label}</span>
-              {showResult && (isSelected || opt.correct) && (
-                <span className={`step-option-explanation ${opt.correct ? "correct" : "wrong"}`}>{opt.explanation}</span>
-              )}
+              onClick={() => !answer && onAnswer(opt)} disabled={!!answer}
+              style={{ animationDelay: `${i * 50}ms` }}>
+              <span className="step-option-letter">{opt.id.toUpperCase()}</span>
+              <div className="step-option-content">
+                <span className="step-option-label">{opt.label}</span>
+                {showResult && (isSelected || opt.correct) && (
+                  <span className={`step-option-explanation ${opt.correct ? "correct" : "wrong"}`}>{opt.explanation}</span>
+                )}
+              </div>
             </button>
           );
         })}
@@ -418,23 +528,27 @@ function ResultsOverlay({ score, total, scenario, answers, onBack }: {
   score: number; total: number; scenario: Scenario;
   answers: Record<string, Option | null>; onBack: () => void;
 }) {
+  const [showSteps, setShowSteps] = useState(false);
   const pct = Math.round((score / total) * 100);
-  const grade = pct === 100 ? { label: "EXCELENTE", color: "var(--ok)" } : pct >= 60 ? { label: "BUENO", color: "var(--accent)" } : { label: "NECESITA MEJORA", color: "var(--high)" };
+  const grade = pct === 100 ? { label: "EXCELENTE", color: "var(--ok)", icon: "🏆" } : pct >= 60 ? { label: "BUENO", color: "var(--accent)", icon: "✓" } : { label: "NECESITA MEJORA", color: "var(--high)", icon: "📚" };
+
+  useEffect(() => { setTimeout(() => setShowSteps(true), 400); }, []);
 
   return (
     <div className="results-overlay">
       <div className="results-card">
         <div className="results-header">
+          <div className="results-icon" style={{ color: grade.color }}>{grade.icon}</div>
           <h2>Investigación completada</h2>
           <div className="results-score" style={{ color: grade.color }}>{score}/{total}</div>
           <div className="results-grade" style={{ color: grade.color }}>{grade.label} — {pct}%</div>
         </div>
-        <div className="results-steps">
-          {STEP_ORDER.map((stepId) => {
+        <div className={`results-steps ${showSteps ? "visible" : ""}`}>
+          {STEP_ORDER.map((stepId, i) => {
             const a = answers[stepId];
             const s = scenario.steps.find((st) => st.id === stepId);
             return (
-              <div key={stepId} className={`results-step ${a?.correct ? "correct" : "wrong"}`}>
+              <div key={stepId} className={`results-step ${a?.correct ? "correct" : "wrong"}`} style={{ animationDelay: `${i * 100}ms` }}>
                 <div className="results-step-header">
                   <span className="results-step-icon">{a?.correct ? "✓" : "✗"}</span>
                   <span className="results-step-title">{STEP_LABELS[stepId]}</span>
@@ -456,7 +570,7 @@ function ResultsOverlay({ score, total, scenario, answers, onBack }: {
           <p>{scenario.summary}</p>
         </div>
         <div className="results-actions">
-          <button className="soc-btn primary" onClick={onBack}>Volver al panel de casos</button>
+          <button className="soc-btn primary large" onClick={onBack}>Volver al panel de casos</button>
         </div>
       </div>
     </div>
