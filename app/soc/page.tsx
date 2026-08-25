@@ -200,6 +200,21 @@ export default function SOCPage() {
                   />
                 )}
               </div>
+              {currentStep === "playbook" && selectedScenario.playbook && (
+                <div className="playbook-panel">
+                  <div className="playbook-header">📖 Playbook de la empresa</div>
+                  {selectedScenario.playbook.map((entry) => (
+                    <div key={entry.id} className="playbook-entry">
+                      <div className="playbook-entry-header">
+                        <span className="playbook-id">{entry.id}</span>
+                        <span className="playbook-title">{entry.title}</span>
+                        <span className="playbook-category">{entry.category}</span>
+                      </div>
+                      <pre className="playbook-content">{entry.content}</pre>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="investigation-nav">
                 <button className="soc-btn ghost" onClick={goBack} disabled={stepIdx === 0}>
                   ← Anterior

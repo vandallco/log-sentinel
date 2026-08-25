@@ -690,6 +690,73 @@
   border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
+/* ── PLAYBOOK PANEL ── */
+
+.playbook-panel {
+  background: var(--soc-panel);
+  border: 1px solid var(--soc-border);
+  border-radius: 10px;
+  overflow: hidden;
+  animation: option-in 0.3s ease-out;
+}
+
+.playbook-header {
+  padding: 0.6rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-bottom: 1px solid var(--soc-border);
+  background: rgba(34, 211, 238, 0.04);
+}
+
+.playbook-entry {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid rgba(30, 42, 56, 0.4);
+}
+
+.playbook-entry:last-child {
+  border-bottom: none;
+}
+
+.playbook-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.playbook-id {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--soc-accent);
+  background: rgba(34, 211, 238, 0.1);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+}
+
+.playbook-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.playbook-category {
+  font-size: 0.55rem;
+  color: var(--soc-muted);
+  margin-left: auto;
+}
+
+.playbook-content {
+  font-family: inherit;
+  font-size: 0.63rem;
+  color: var(--soc-muted);
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+  background: var(--soc-card);
+  border-radius: 5px;
+  padding: 0.55rem 0.65rem;
+}
+
 /* ── INVESTIGATION NAV ── */
 
 .investigation-nav {
