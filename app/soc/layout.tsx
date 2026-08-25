@@ -12,9 +12,5 @@ export default function SOCLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <html lang="es">
-      <body>{children}</body>
-    </html>
-  );
+  return <>{children}</>;
 }

@@ -1450,6 +1450,15 @@
     opacity: 1;
     transform: translateY(0);
   }
+
+  .scenario-card {
+    cursor: pointer;
+    border: none;
+    text-align: left;
+    width: 100%;
+    font: inherit;
+    color: inherit;
+  }
 }
 
 /* ── FULLSCREEN LOG OVERLAY ── */
@@ -1623,4 +1632,19 @@
 
 .results-step-consequence strong {
   color: var(--soc-critical);
+}
+
+/* ── ACCESSIBILITY ── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--soc-accent);
+  outline-offset: 2px;
 }

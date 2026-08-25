@@ -83,7 +83,7 @@ export const COMPANY: CompanyProfile = {
       name: "Diego López",
       role: "SOC Analyst L2",
       department: "Seguridad",
-      ip: "10.10.1.50",
+      ip: "10.10.1.20",
       vlan: "VLAN 10 — Admin",
       mac: "00:1a:2b:3c:4d:05",
       equipment: "Dell Precision — Windows 10",

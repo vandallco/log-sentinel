@@ -15,6 +15,7 @@ export default function Home() {
   const [raw, setRaw] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [fileError, setFileError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const analyze = (text: string) => {
@@ -23,8 +24,14 @@ export default function Home() {
   };
 
   const loadFile = useCallback((file: File) => {
+    setFileError("");
+    if (file.size > 5 * 1024 * 1024) {
+      setFileError("El archivo supera 5 MB. Intentá con uno más pequeño.");
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => analyze(String(reader.result ?? ""));
+    reader.onerror = () => setFileError("Error al leer el archivo.");
     reader.readAsText(file);
   }, []);
 
@@ -76,6 +83,10 @@ export default function Home() {
               setDragging(true);
             }}
             onDragLeave={() => setDragging(false)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileRef.current?.click(); }}
+            aria-label="Subir archivo de log"
           >
             o arrastrá un archivo .log / hacé click para subirlo
           </div>
@@ -97,6 +108,12 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {fileError && (
+        <div className="panel" style={{ color: "var(--critical)", borderColor: "var(--critical)" }}>
+          {fileError}
+        </div>
+      )}
 
       {!result && (
         <div className="panel empty">
@@ -150,6 +167,11 @@ export default function Home() {
           <h2 className="section">
             Eventos relevantes ({result.parsedEvents.length})
           </h2>
+          {result.parsedEvents.length > 200 && (
+            <p style={{ fontSize: "0.72rem", color: "var(--muted)", margin: "0.5rem 0" }}>
+              Mostrando 200 de {result.parsedEvents.length} eventos.
+            </p>
+          )}
           <div className="panel" style={{ overflowX: "auto", padding: 0 }}>
             <table>
               <thead>
