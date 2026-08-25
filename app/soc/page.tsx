@@ -27,6 +27,7 @@ export default function SOCPage() {
   const [logFilter, setLogFilter] = useState<LogFilter>("all");
   const [logSearch, setLogSearch] = useState("");
   const [stepAnimating, setStepAnimating] = useState(false);
+  const [fullscreenLogs, setFullscreenLogs] = useState(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const userScrolledUp = useRef(false);
   const streamingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -78,7 +79,6 @@ export default function SOCPage() {
     userScrolledUp.current = !atBottom;
   }, []);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (view !== "investigation") return;
@@ -95,11 +95,14 @@ export default function SOCPage() {
         const idx = STEP_ORDER.indexOf(currentStep);
         if (idx > 0) { setStepAnimating(true); setTimeout(() => { setCurrentStep(STEP_ORDER[idx - 1]); setStepAnimating(false); }, 150); }
       }
-      if (e.code === "Escape") resetToDashboard();
+      if (e.code === "Escape") {
+        if (fullscreenLogs) setFullscreenLogs(false);
+        else resetToDashboard();
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [view, currentStep, answers]);
+  }, [view, currentStep, answers, fullscreenLogs]);
 
   const startInvestigation = (scenario: Scenario) => {
     setSelectedScenario(scenario);
@@ -144,6 +147,7 @@ export default function SOCPage() {
     setIsPaused(false);
     setLogFilter("all");
     setLogSearch("");
+    setFullscreenLogs(false);
     if (streamingRef.current) clearInterval(streamingRef.current);
   };
 
@@ -151,6 +155,16 @@ export default function SOCPage() {
     setVisibleCount(allLogs.length);
     setIsStreaming(false);
     if (streamingRef.current) clearInterval(streamingRef.current);
+  };
+
+  const openLogsInNewTab = () => {
+    if (!selectedScenario) return;
+    const logLines = filteredLogs.map((l) =>
+      `[${l.timestamp}] [${l.severity.toUpperCase()}] [${l.source}] ${l.message}${l.flagged ? " ⚠ FLAGGED" : ""}`
+    ).join("\n");
+    const blob = new Blob([logLines], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
   };
 
   const currentStepData = selectedScenario?.steps.find((s) => s.id === currentStep);
@@ -200,21 +214,6 @@ export default function SOCPage() {
                   />
                 )}
               </div>
-              {currentStep === "playbook" && selectedScenario.playbook && (
-                <div className="playbook-panel">
-                  <div className="playbook-header">📖 Playbook de la empresa</div>
-                  {selectedScenario.playbook.map((entry) => (
-                    <div key={entry.id} className="playbook-entry">
-                      <div className="playbook-entry-header">
-                        <span className="playbook-id">{entry.id}</span>
-                        <span className="playbook-title">{entry.title}</span>
-                        <span className="playbook-category">{entry.category}</span>
-                      </div>
-                      <pre className="playbook-content">{entry.content}</pre>
-                    </div>
-                  ))}
-                </div>
-              )}
               <div className="investigation-nav">
                 <button className="soc-btn ghost" onClick={goBack} disabled={stepIdx === 0}>
                   ← Anterior
@@ -245,12 +244,54 @@ export default function SOCPage() {
                 onSkip={skipToEnd}
                 onFilterChange={setLogFilter}
                 onSearchChange={setLogSearch}
+                onFullscreen={() => setFullscreenLogs(true)}
+                onOpenNewTab={openLogsInNewTab}
               />
             </div>
           </div>
           {completed && (
             <ResultsOverlay score={score} total={STEP_ORDER.length} scenario={selectedScenario} answers={answers} onBack={resetToDashboard} />
           )}
+        </div>
+      )}
+
+      {fullscreenLogs && (
+        <div className="fullscreen-overlay" onClick={() => setFullscreenLogs(false)}>
+          <div className="fullscreen-card" onClick={(e) => e.stopPropagation()}>
+            <div className="fullscreen-header">
+              <h3>Logs del sistema — Vista completa</h3>
+              <div className="fullscreen-actions">
+                <button className="soc-btn ghost" onClick={openLogsInNewTab}>Abrir en nueva pestaña</button>
+                <button className="soc-btn ghost" onClick={() => setFullscreenLogs(false)}>Cerrar ✕</button>
+              </div>
+            </div>
+            <div className="fullscreen-filters">
+              <div className="log-filter-tabs">
+                {(["all", "flagged", "warning", "critical"] as LogFilter[]).map((f) => (
+                  <button key={f} className={`log-filter-tab ${logFilter === f ? "active" : ""}`} onClick={() => setLogFilter(f)}>
+                    {f === "all" ? "Todos" : f === "flagged" ? "Marcados" : f === "warning" ? "Warnings" : "Críticos"}
+                    <span className="filter-count">
+                      {f === "all" ? visibleLogs.length : f === "flagged" ? visibleLogs.filter((l) => l.flagged).length : f === "warning" ? visibleLogs.filter((l) => l.severity === "warning").length : visibleLogs.filter((l) => l.severity === "critical" || l.flagged).length}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <input className="log-search" type="text" placeholder="Buscar en logs..." value={logSearch} onChange={(e) => setLogSearch(e.target.value)} />
+            </div>
+            <div className="fullscreen-logs">
+              {filteredLogs.map((log, i) => (
+                <div key={log.line} className={`log-entry ${log.severity} ${log.flagged ? "flagged" : ""}`}>
+                  <div className="log-entry-header">
+                    <span className="log-line">#{log.line}</span>
+                    <span className="log-timestamp">{log.timestamp}</span>
+                    <span className="log-source">{log.source}</span>
+                    {log.flagged && <span className="log-flag">!</span>}
+                  </div>
+                  <div className="log-message">{log.message}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -262,6 +303,7 @@ export default function SOCPage() {
 function LogPanel({
   logs, allVisible, totalLogs, isStreaming, isPaused, speed, logFilter, logSearch,
   containerRef, onScroll, onPauseToggle, onSpeedChange, onSkip, onFilterChange, onSearchChange,
+  onFullscreen, onOpenNewTab,
 }: {
   logs: LogEntry[]; allVisible: LogEntry[]; totalLogs: number;
   isStreaming: boolean; isPaused: boolean; speed: number;
@@ -270,6 +312,7 @@ function LogPanel({
   onScroll: () => void; onPauseToggle: () => void;
   onSpeedChange: (s: number) => void; onSkip: () => void;
   onFilterChange: (f: LogFilter) => void; onSearchChange: (s: string) => void;
+  onFullscreen: () => void; onOpenNewTab: () => void;
 }) {
   const flaggedCount = allVisible.filter((l) => l.flagged).length;
   const warnCount = allVisible.filter((l) => l.severity === "warning").length;
@@ -302,6 +345,8 @@ function LogPanel({
         <div className="log-panel-controls">
           {lastTimestamp && <span className="log-timestamp-current">{lastTimestamp}</span>}
           <span className="log-panel-count">{allVisible.length}/{totalLogs}</span>
+          <button className="log-ctrl-btn expand-btn" onClick={onFullscreen} title="Pantalla completa">⛶</button>
+          <button className="log-ctrl-btn expand-btn" onClick={onOpenNewTab} title="Abrir en nueva pestaña">⧉</button>
           {isStreaming && (
             <>
               <button className="log-ctrl-btn" onClick={onPauseToggle} title={isPaused ? "Reanudar (Espacio)" : "Pausar (Espacio)"}>
@@ -339,7 +384,7 @@ function LogPanel({
 
       <div className="log-entries" ref={containerRef} onScroll={onScroll}>
         {logs.map((log, i) => (
-          <div key={log.line} className={`log-entry ${log.severity} ${log.flagged ? "flagged" : ""} ${i === logs.length - 1 && allVisible.length === visibleCount(allVisible, log) ? "newest" : ""}`}>
+          <div key={log.line} className={`log-entry ${log.severity} ${log.flagged ? "flagged" : ""} ${i === logs.length - 1 ? "newest" : ""}`}>
             <div className="log-entry-header">
               <span className="log-line">#{log.line}</span>
               <span className="log-timestamp">{log.timestamp}</span>
@@ -363,11 +408,10 @@ function LogPanel({
   );
 }
 
-function visibleCount(arr: unknown[], _item: unknown) { return arr.length; }
-
-/* ── COMPANY PANEL ── */
+/* ── COMPANY PANEL (with playbooks) ── */
 
 function CompanyPanel() {
+  const [playbookOpen, setPlaybookOpen] = useState(true);
   return (
     <div className="company-panel">
       <div className="company-grid">
@@ -425,6 +469,26 @@ function CompanyPanel() {
             <div><strong>Escalamiento:</strong> {COMPANY.escalationContact}</div>
             <div><strong>Horario:</strong> {COMPANY.workHours}</div>
           </div>
+        </div>
+        <div className="company-section company-section-full">
+          <div className="playbook-toggle" onClick={() => setPlaybookOpen(!playbookOpen)}>
+            <h3>📖 Playbooks</h3>
+            <span className={`playbook-chevron ${playbookOpen ? "open" : ""}`}>▼</span>
+          </div>
+          {playbookOpen && (
+            <div className="playbook-list">
+              {COMPANY.playbooks.map((entry) => (
+                <div key={entry.id} className="playbook-entry">
+                  <div className="playbook-entry-header">
+                    <span className="playbook-id">{entry.id}</span>
+                    <span className="playbook-title">{entry.title}</span>
+                    <span className="playbook-category">{entry.category}</span>
+                  </div>
+                  <pre className="playbook-content">{entry.content}</pre>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -499,13 +563,14 @@ function ProgressBar({ steps, current, answers }: { steps: StepId[]; current: St
   );
 }
 
-/* ── STEP CARD ── */
+/* ── STEP CARD (with consequences) ── */
 
 function StepCard({ step, stepNum, totalSteps, answer, onAnswer }: {
   step: { id: string; title: string; description: string; hint: string; options: Option[] };
   stepNum: number; totalSteps: number;
   answer: Option | null; onAnswer: (opt: Option) => void;
 }) {
+  const wrongOption = answer && !answer.correct ? answer : null;
   return (
     <div className="step-card">
       <div className="step-card-header">
@@ -533,6 +598,14 @@ function StepCard({ step, stepNum, totalSteps, answer, onAnswer }: {
           );
         })}
       </div>
+      {wrongOption && wrongOption.consequence && (
+        <div className="consequence-banner">
+          <div className="consequence-icon">⚠</div>
+          <div className="consequence-text">
+            <strong>Consecuencia real:</strong> {wrongOption.consequence}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -573,6 +646,9 @@ function ResultsOverlay({ score, total, scenario, answers, onBack }: {
                     <strong>Tu respuesta:</strong> {a.label}
                     {!a.correct && s && (
                       <div className="results-step-correct"><strong>Correcta:</strong> {s.options.find((o) => o.correct)?.label}</div>
+                    )}
+                    {!a.correct && a.consequence && (
+                      <div className="results-step-consequence"><strong>Consecuencia:</strong> {a.consequence}</div>
                     )}
                   </div>
                 )}
