@@ -92,33 +92,23 @@ const scenario: Scenario = {
         {
           id: "a",
           label:
-            "Solo las líneas 16-22 (los intentos fallidos de 185.220.101.7)",
-          correct: false,
-          explanation:
-            "Estás ignorando el login exitoso, el comando sudo y el intento de conexión a la DB. La gravedad del incidente no está solo en los fallos, sino en lo que pasó después del acceso exitoso.",
-          consequence:
-            "En un SOC real, ignorar los eventos post-acceso significaría no detectar que el atacante ya tiene acceso root, está leyendo /etc/shadow, intentando moverse lateralmente a la base de datos y creando usuarios backdoor. Mientras investigás solo los fallos, el atacante Roba credenciales y establece persistencia.",
-        },
-        {
-          id: "b",
-          label:
             "Líneas 16-29 y 41-45 (todos los eventos de 185.220.101.7 incluyendo el éxito y post-explotación)",
           correct: true,
           explanation:
             "Correcto. La IP 185.220.101.7 es externa y ejecutó una secuencia completa: brute force → acceso exitoso → lectura de /etc/shadow → intento de conexión a la DB → creación de usuario → descarga de payload. Todo es parte del mismo incidente.",
         },
         {
-          id: "c",
+          id: "b",
           label:
-            "Todas las entradas del log (líneas 1-55)",
+            "Solo las líneas 16-22 (los intentos fallidos de 185.220.101.7)",
           correct: false,
           explanation:
-            "Las líneas normales incluyen tráfico de Lucía, Carlos, health checks y otros usuarios legítimos. No son parte del incidente. Incluir todo ensucia el análisis y dificulta la investigación.",
+            "Estás ignorando el login exitoso, el comando sudo y el intento de conexión a la DB. La gravedad del incidente no está solo en los fallos, sino en lo que pasó después del acceso exitoso.",
           consequence:
-            "En un SOC real, entregar un reporte con 55 líneas de 'evidencia' donde la mitad es tráfico legítimo hace que el equipo de contención pierda horas revisando activity normal. Mientras tanto, el atacante sigue activo moviéndose lateralmente.",
+            "En un SOC real, ignorar los eventos post-acceso significaría no detectar que el atacante ya tiene acceso root, está leyendo /etc/shadow, intentando moverse lateralmente a la base de datos y creando usuarios backdoor. Mientras investigás solo los fallos, el atacante roba credenciales y establece persistencia.",
         },
         {
-          id: "d",
+          id: "c",
           label:
             "Solo la línea 41 (el login exitoso)",
           correct: false,
@@ -126,6 +116,16 @@ const scenario: Scenario = {
             "El login exitoso es el punto de inflexión, pero necesitás ver los intentos previos para confirmar que fue brute force, y los eventos posteriores para entender el alcance del compromiso.",
           consequence:
             "En un SOC real, reportar solo el login exitoso sin contexto haría que el equipo no dimensione la gravedad. No verían el brute force previo ni la post-explotación, y podrían tratar esto como un login normal en lugar de un ataque activo.",
+        },
+        {
+          id: "d",
+          label:
+            "Todas las entradas del log (líneas 1-55)",
+          correct: false,
+          explanation:
+            "Las líneas normales incluyen tráfico de Lucía, Carlos, health checks y otros usuarios legítimos. No son parte del incidente. Incluir todo ensucia el análisis y dificulta la investigación.",
+          consequence:
+            "En un SOC real, entregar un reporte con 55 líneas de 'evidencia' donde la mitad es tráfico legítimo hace que el equipo de contención pierda horas revisando activity normal. Mientras tanto, el atacante sigue activo moviéndose lateralmente.",
         },
       ],
     },
@@ -138,15 +138,6 @@ const scenario: Scenario = {
       options: [
         {
           id: "a",
-          label: "Carlos Ruiz (Analista Financiero)",
-          correct: false,
-          explanation:
-            "Carlos está en Finanzas (VLAN 30) y no tiene responsabilidad sobre srv-web-01. No tiene las credenciales ni el conocimiento técnico para responder a un compromiso SSH.",
-          consequence:
-            "En un SOC real, asignar un incidente a la persona equivocada retrasa la respuesta horas. Carlos tendría que contactar a IT para entender qué está pasando, mientras el atacante sigue activo en el servidor.",
-        },
-        {
-          id: "b",
           label:
             "Martín González (SysAdmin Senior — VLAN 10 Admin)",
           correct: false,
@@ -154,6 +145,15 @@ const scenario: Scenario = {
             "Martín podría ayudar con la contención técnica, pero como SysAdmin no es el primero en la cadena de respuesta de seguridad. Debería ser contactado después del SOC.",
           consequence:
             "En un SOC real, escalar directamente al SysAdmin sin pasar por el SOC bypass el proceso de clasificación. Si no se investiga primero, podrías estar escalando un falso positivo o perdiendo evidencia crítica que solo un analista de seguridad notaría.",
+        },
+        {
+          id: "b",
+          label: "Sofía Ramírez (Gerente de Operaciones)",
+          correct: false,
+          explanation:
+            "Sofía es gerente operativa, no técnica. Su involvement sería posterior si se necesita comunicación con management o clientes afectados. No es la primera línea de respuesta.",
+          consequence:
+            "En un SOC real, involucrar a un gerente antes de que el equipo técnico confirme el incidente genera alarma innecesaria y presión para cerrar rápido sin investigación adecuada.",
         },
         {
           id: "c",
@@ -165,12 +165,12 @@ const scenario: Scenario = {
         },
         {
           id: "d",
-          label: "Sofía Ramírez (Gerente de Operaciones)",
+          label: "Carlos Ruiz (Analista Financiero)",
           correct: false,
           explanation:
-            "Sofía es gerente operativa, no técnica. Su involvement sería posterior si se necesita comunicación con management o clientes afectados. No es la primera línea de respuesta.",
+            "Carlos está en Finanzas (VLAN 30) y no tiene responsabilidad sobre srv-web-01. No tiene las credenciales ni el conocimiento técnico para responder a un compromiso SSH.",
           consequence:
-            "En un SOC real, involucrar a un gerente antes de que el equipo técnico confirme el incidente genera alarma innecesaria y presión para cerrar rápido sin investigación adecuada.",
+            "En un SOC real, asignar un incidente a la persona equivocada retrasa la respuesta horas. Carlos tendría que contactar a IT para entender qué está pasando, mientras el atacante sigue activo en el servidor.",
         },
       ],
     },
@@ -183,23 +183,6 @@ const scenario: Scenario = {
       options: [
         {
           id: "a",
-          label: "Bloquear la IP en el firewall inmediatamente",
-          correct: false,
-          explanation:
-            "Bloquear la IP es parte de la contención, pero el protocolo dice verificar primero si el acceso es legítimo. Si bloqueás antes de investigar, podrías cortar una conexión legítima de un administrador remoto.",
-          consequence:
-            "En un SOC real, bloquear una IP sin verificar si hay un administrador legítimo usando VPN podría cortar el acceso remoto de emergencia del equipo de TI, dejando la infraestructura sin soporte durante un incidente real.",
-        },
-        {
-          id: "b",
-          label:
-            "Verificar si el acceso es legítimo (usuario, horario, IP conocida)",
-          correct: true,
-          explanation:
-            "Correcto. El playbook indica: 'Verificar si el acceso es legítimo (usuario, horario, IP conocida)'. En este caso, root desde una IP rusa a las 3 AM claramente NO es legítimo.",
-        },
-        {
-          id: "c",
           label: "Forzar rotación de credenciales del usuario",
           correct: false,
           explanation:
@@ -208,13 +191,30 @@ const scenario: Scenario = {
             "En un SOC real, forzar rotación de credenciales sin confirmar el incidente puede interrumpir procesos automatizados que dependen de esas credenciales, causando caídas en servicios de producción.",
         },
         {
-          id: "d",
+          id: "b",
+          label: "Bloquear la IP en el firewall inmediatamente",
+          correct: false,
+          explanation:
+            "Bloquear la IP es parte de la contención, pero el protocolo dice verificar primero si el acceso es legítimo. Si bloqueás antes de investigar, podrías cortar una conexión legítima de un administrador remoto.",
+          consequence:
+            "En un SOC real, bloquear una IP sin verificar si hay un administrador legítimo usando VPN podría cortar el acceso remoto de emergencia del equipo de TI, dejando la infraestructura sin soporte durante un incidente real.",
+        },
+        {
+          id: "c",
           label: "Crear ticket en Jira y esperar",
           correct: false,
           explanation:
             "Esperar no es una opción cuando hay un compromiso activo. El ticket se crea, pero la respuesta inmediata es verificar y contener, no sentarse a esperar.",
           consequence:
             "En un SOC real, esperar con un compromiso activo permite que el atacante complete su objetivo: robar datos, instalar backdoors, o moverse lateralmente. Cada minuto de inacción aumenta el daño.",
+        },
+        {
+          id: "d",
+          label:
+            "Verificar si el acceso es legítimo (usuario, horario, IP conocida)",
+          correct: true,
+          explanation:
+            "Correcto. El playbook indica: 'Verificar si el acceso es legítimo (usuario, horario, IP conocida)'. En este caso, root desde una IP rusa a las 3 AM claramente NO es legítimo.",
         },
       ],
     },
@@ -227,6 +227,14 @@ const scenario: Scenario = {
       options: [
         {
           id: "a",
+          label:
+            "Positivo verdadero — Brute force con compromiso confirmado",
+          correct: true,
+          explanation:
+            "Correcto. Es un positivo verdadero. La secuencia de eventos demuestra un ataque exitoso: reconocimiento (intentos con usuarios variados), acceso (password correcto), y post-explotación (sudo, intento de lateral movement a la DB).",
+        },
+        {
+          id: "b",
           label: "Falso positivo",
           correct: false,
           explanation:
@@ -235,21 +243,23 @@ const scenario: Scenario = {
             "En un SOC real, marcar esto como falso positivo significaría ignorar un compromiso activo. El atacante seguiría dentro del servidor robando datos y moviéndose lateralmente durante horas o días antes de que alguien lo detecte.",
         },
         {
-          id: "b",
-          label:
-            "Positivo verdadero — Brute force con compromiso confirmado",
-          correct: true,
-          explanation:
-            "Correcto. Es un positivo verdadero. La secuencia de eventos demuestra un ataque exitoso: reconocimiento (intentos con usuarios variados), acceso (password correcto), y post-explotación (sudo, intento de lateral movement a la DB).",
-        },
-        {
           id: "c",
           label: "Requiere más investigación",
           correct: false,
           explanation:
             "Con los indicadores disponibles (IP externa, acesso root, /etc/shadow, intento de conexión a DB), ya hay suficiente evidencia para clasificar como positivo. Más investigación se hace DURANTE la fase de contención, no para decidir si es real.",
           consequence:
-            "En un SOC real, demorar la clasificación bajo el pretexto de \"más investigación\" permite que el atacante siga activo. La clasificación no es el momento de dudar cuando la evidencia es clara.",
+            "En un SOC real, demorar la clasificación bajo el pretexto de 'más investigación' permite que el atacante siga activo. La clasificación no es el momento de dudar cuando la evidencia es clara.",
+        },
+        {
+          id: "d",
+          label:
+            "Requiere escalamiento a CISO antes de clasificar",
+          correct: false,
+          explanation:
+            "El analista SOC tiene evidencia suficiente para clasificar por sí mismo. El escalamiento a CISO es para notificación de impacto organizacional, no para validar la clasificación técnica del incidente.",
+          consequence:
+            "En un SOC real, esperar aprobación del CISO para clasificar un incidente agrega horas de retraso. Mientras se busca al ejecutivo, el atacante sigue activo y la ventana de contención se reduce.",
         },
       ],
     },
@@ -263,6 +273,16 @@ const scenario: Scenario = {
         {
           id: "a",
           label:
+            "Incidente de acceso no autorizado en srv-web-01. Se requiere investigación del equipo de TI para determinar alcance y acciones correctivas.",
+          correct: false,
+          explanation:
+            "Este reporte no contiene ningún dato técnico: no menciona IP atacante, timestamp, tipo de ataque, ni evidencia. 'Investigación del equipo de TI' es ambiguo y no define responsables ni prioridad.",
+          consequence:
+            "En un SOC real, un reporte sin datos técnicos no puede usarse para forensic, legal o auditoría. Si el incidente escala a nivel regulatorio, este reporte no sirve como evidencia documental. Además, el equipo de TI no sabe qué investigar sin datos específicos.",
+        },
+        {
+          id: "b",
+          label:
             "Se detectó activity sospechosa en el servidor. Revisar y tomar acciones.",
           correct: false,
           explanation:
@@ -271,7 +291,7 @@ const scenario: Scenario = {
             "En un SOC real, un reporte así de vago genera confusión: el equipo de contención no sabe qué servidor bloquear, el management no entiende la gravedad, y en auditoría no hay evidencia documentada del incidente.",
         },
         {
-          id: "b",
+          id: "c",
           label:
             "Brute force exitoso desde IP externa 185.220.101.7 contra srv-web-01 (root). Acceso confirmado a las 03:12:44 UTC. Post-acceso: lectura de /etc/shadow y tentativa de conexión a srv-db-01 (Puerto 5432 bloqueado por UFW). Impacto: compromiso de credenciales root del servidor web. Acciones requeridas: revocar sesiones, rotar credenciales, bloquear IP, forense de srv-web-01.",
           correct: true,
@@ -279,14 +299,14 @@ const scenario: Scenario = {
             "Correcto. Esta redacción incluye: QUÉ pasó (brute force exitoso), DESDE DÓNDE (IP externa), CUÁNDO (timestamp), QUÉ SE AFECTÓ (srv-web-01 root), EVIDENCIA POST-ACCESO (/etc/shadow, intento de DB), IMPACTO, y ACCIONES REQUERIDAS. Es el formato estándar de un SOC profesional.",
         },
         {
-          id: "c",
+          id: "d",
           label:
-            "Hubo un hackeo al server. El atacante entró por SSH y leyó archivos. Hay que cambiar las contraseñas.",
+            "Resumen ejecutivo para management: 'Incidente de seguridad en srv-web-01, acceso no autorizado detectado, en investigación. Se requiere reunión de emergencia con CISO y Legal.'",
           correct: false,
           explanation:
-            "Lenguaje informal y sin datos técnicos. 'Hackeo' no es un término profesional. Falta IP, timestamp, servidor específico, archivos accionados, y plan de acción concreto.",
+            "Un resumen ejecutivo no reemplaza el reporte técnico. Falta toda la evidencia: IP, timestamps, logs, alcance del compromiso. Management necesita contexto, pero el equipo de contención necesita datos técnicos accionables.",
           consequence:
-            "En un SOC real, un reporte sin datos técnicos no puede usarse para forensic, legal o auditoría. Si el incidente escala a nivel regulatorio, este reporte no sirve como evidencia documental.",
+            "En un SOC real, priorizar el reporte ejecutivo sobre el técnico deja al equipo de respuesta sin la información que necesita para contener. La reunión de emergencia se realiza sin datos, y el atacante sigue activo mientras se discute en会议室.",
         },
       ],
     },
@@ -299,31 +319,39 @@ const scenario: Scenario = {
       options: [
         {
           id: "a",
-          label:
-            "Cerrar el caso y olvidarlo",
-          correct: false,
-          explanation:
-            "Nunca se cierra un caso sin verificar que las acciones de contención se ejecutaron. El cierre requiere evidencia de remediación.",
-          consequence:
-            "En un SOC real, cerrar un caso sin verificar remediación significa que el atacante podría seguir teniendo acceso. El incidente se reabrirá días después con mayor impacto cuando otros lo detecten.",
-        },
-        {
-          id: "b",
-          label:
-            "Escalar a Martín para ejecutar la contención técnica y volver al panel de logs para revisar más alertas",
-          correct: true,
-          explanation:
-            "Correcto. El flujo SOC es: detectar → clasificar → escalar → contener → remediar. Tu trabajo como analyst es clasificar y escalar. Volvés al panel para seguir monitoreando mientras el SysAdmin ejecuta la contención.",
-        },
-        {
-          id: "c",
-          label:
-            "Intentar bloquear la IP vos mismo desde la terminal",
+          label: "Intentar bloquear la IP vos mismo desde la terminal",
           correct: false,
           explanation:
             "Como SOC analyst, no deberías ejecutar cambios de infraestructura directamente. Eso es responsabilidad del SysAdmin/NetOps. Tu rol es reportar y escalar.",
           consequence:
             "En un SOC real, ejecutar cambios de infraestructura sin autorización puede causar downtime accidental y sin audit trail. Si el bloqueo falla o afecta servicios legítimos, no hay documentación de quién lo hizo ni por qué.",
+        },
+        {
+          id: "b",
+          label: "Documentar el incidente en una Wiki interna y archivar el ticket como 'investigado'",
+          correct: false,
+          explanation:
+            "Documentar en Wiki no es un método de escalamiento válido. El ticket no se cierra hasta que las acciones de contención se ejecuten y verifiquen. Archivar antes de remediación es prematuro.",
+          consequence:
+            "En un SOC real, archivar un ticket sin verificar que las acciones de contención se ejecutaron significa que el atacante podría seguir teniendo acceso. El incidente se reabrirá días después con mayor impacto cuando otros lo detecten, y no habrá registro de por qué no se actuó oportunamente.",
+        },
+        {
+          id: "c",
+          label:
+            "Enviar un email al equipo de TI explicando el incidente y volver al panel de logs",
+          correct: false,
+          explanation:
+            "El email no es un método de escalamiento válido en operaciones SOC. Es lento, no tiene audit trail, y puede no llegar a la persona correcta. El escalamiento se hace por el sistema de tickets o alertas designado.",
+          consequence:
+            "En un SOC real, escalar por email significa que el SysAdmin podría no ver la alerta por horas. Mientras tanto, el atacante sigue activo. Además, sin registro en el sistema de tickets, no hay evidencia de cuándo se escaló ni quién fue notificado.",
+        },
+        {
+          id: "d",
+          label:
+            "Escalar a Martín para ejecutar la contención técnica y volver al panel de logs para revisar más alertas",
+          correct: true,
+          explanation:
+            "Correcto. El flujo SOC es: detectar → clasificar → escalar → contener → remediar. Tu trabajo como analyst es clasificar y escalar. Volvés al panel para seguir monitoreando mientras el SysAdmin ejecuta la contención.",
         },
       ],
     },

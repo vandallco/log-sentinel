@@ -92,40 +92,40 @@ const scenario: Scenario = {
         {
           id: "a",
           label:
-            "Solo las líneas 11-13 (powershell.exe y sus conexiones de red)",
+            "Reasignar el caso a Carlos para que revise su propia workstation",
           correct: false,
           explanation:
-            "Estás capturando el vector de ataque pero perdiendo la evidencia de lo que pasó después: el mapeo de shares SMB, la ejecución del script, el dump de la DB, la creación del zip, la exfiltración externa, y la persistencia.",
+            "Carlos es el usuario comprometido. No podés dejar que el sospechoso investigue su propia estación de trabajo — destruiría evidencia, directa o indirectamente.",
           consequence:
-            "En un SOC real, reportar solo el PowerShell encoded sin la evidencia de post-explotación hace que el equipo subestime la gravedad. No sabrían que ya se robó la base de datos completa y se instaló persistencia.",
+            "En un SOC real, permitir que el usuario afectado manipule la máquina comprometida destruye artefactos forenses críticos: logs temporal, archivos del malware, y registros de conexiones. El caso queda sin evidencia.",
         },
         {
           id: "b",
+          label:
+            "Aislar la workstation de la red y apagarla inmediatamente para cortar la conexión",
+          correct: false,
+          explanation:
+            "Apagar la máquina destruye la evidencia volátil en memoria RAM: el keylogger activo, las conexiones C2 abiertas, las credenciales robadas en memoria, y los procesos maliciosos. Se necesita imagen forense de RAM antes de apagar.",
+          consequence:
+            "En un SOC real, apagar sin imagen forense borra el estado del malware en tiempo real. Sin la memoria, no podés determinar qué datos se capturaron ni qué conexiones estaban activas.",
+        },
+        {
+          id: "c",
+          label:
+            "Notificar al equipo de Legal antes de hacer cualquier contención",
+          correct: false,
+          explanation:
+            "La contención es PRIORITAD. Legal puede ser notificado después. Mientras Legal revisa el caso, el atacante sigue operando: exfiltrando datos, instalando persistencia, y moviéndose a otros servidores.",
+          consequence:
+            "En un SOC real, priorizar a Legal sobre la contención resulta en exfiltración continua. Cada minuto de demora = más datos de clientes comprometidos y más backdoors instalados.",
+        },
+        {
+          id: "d",
           label:
             "Líneas 11-25 y 41-55 (desde powershell.exe hasta la exfiltración y persistencia)",
           correct: true,
           explanation:
             "Correcto. La secuencia completa es: PowerShell con encoded command → conexiones SMB/WMI → mapeo de shares → ejecución de script → dump de DB → creación de zip → exfiltración HTTPS → creación de usuario → persistencia (cron, scheduled tasks, SSH keys) → más exfiltración. Las líneas normales son activity legítima.",
-        },
-        {
-          id: "c",
-          label:
-            "Todas las líneas del log (1-55)",
-          correct: false,
-          explanation:
-            "Las líneas 1-2, 3-10, 26-40 incluyen deploy de Martin, health checks, activity de Lucía, Sofía, Carlos, y otros. Son activity normal del día. Incluirlas ensucia la evidencia y dificulta el análisis forense.",
-          consequence:
-            "En un SOC real, entregar 55 líneas de \"evidencia\" donde 30 son tráfico legítimo hace que el equipo de contención pierda horas revisando activity normal mientras el atacante sigue activo.",
-        },
-        {
-          id: "d",
-          label:
-            "Solo la línea 17 (el CPU spike de srv-db-01)",
-          correct: false,
-          explanation:
-            "El CPU spike es un síntoma, no la causa. Sin ver el origen (power-shell en ws-carlos), el método (SMB/WMI), la exfiltración (zip + HTTPS), y la persistencia, no podés construir el caso.",
-          consequence:
-            "En un SOC real, tratar el CPU spike como el incidente principal lleva a investigar srv-db-01 cuando el punto de origen es ws-carlos. El equipo perdería tiempo revisando el servidor equivocado.",
         },
       ],
     },
@@ -139,12 +139,12 @@ const scenario: Scenario = {
         {
           id: "a",
           label:
-            "Solo Diego López (SOC L2) — él puede manejar todo",
+            "Martín González (SysAdmin) — que revise el servidor directamente desde su terminal",
           correct: false,
           explanation:
-            "El PB-IR-002 clasifica esto como NIVEL 3: exfiltración de datos + movimiento lateral a DB + impacto en pagos. Diego puede iniciar la respuesta, pero esto requiere escalamiento inmediato a nivel superior.",
+            "Martín no es parte del equipo de respuesta a incidentes. Su intervención sin protocolo puede alterar logs, contaminar evidencia forense, y no seguir la cadena de custodia requerida para escalamiento legal.",
           consequence:
-            "En un SOC real, intentar manejar un incidente nivel 3 solo con el SOC L2 sobrepasa sus capacidades. La contención requiere DevOps, el escalamiento requiere CISO, y la notificación legal requiere DPO.",
+            "En un SOC real, un SysAdmin actuando sin coordinación con SOC puede borrar logs relevantes, reiniciar servicios que preservan estado del ataque, y comprometer la admisibilidad de evidencia en procedimientos legales.",
         },
         {
           id: "b",
@@ -157,22 +157,22 @@ const scenario: Scenario = {
         {
           id: "c",
           label:
-            "Martín González (SysAdmin) — que apague las máquinas",
+            "Automatizar la contención con un playbook ejecutable que aislar y bloquee todo simultáneamente",
           correct: false,
           explanation:
-            "Apagar no es contención inteligente. Se necesita forense en vivo (imagen de RAM) antes de apagar. Martín sería útil para la contención técnica, pero bajo dirección del equipo de seguridad.",
+            "No existe playbook automatizado para este escenario (solo hay 2 playbooks registrados y ninguno es ejecutable). La automatización sin validación humana puede aislar sistemas legítimos o cortar servicios de pago activos.",
           consequence:
-            "En un SOC real, apagar la máquina sin imagen forense destruye evidencia en memoria RAM que contiene: contraseñas en claro, llaves de cifrado, tokens de sesión, y la tabla de conexiones del malware.",
+            "En un SOC real, ejecutar automatización de contención sin revisión manual puede desconectar srv-web-01 del procesamiento de pagos, causando pérdida de transacciones en curso y daño financiero mayor al incidente original.",
         },
         {
           id: "d",
           label:
-            "Sofía Ramírez (Gerente de Ops) — que decida qué hacer",
+            "Sofía Ramírez (Gerente de Ops) — que escale a Legal primero para evaluar obligaciones regulatorias",
           correct: false,
           explanation:
-            "Sofía no es parte de la cadena de respuesta técnica. Su rol es comunicacional y estratégico, no táctico. Ella se involucra después del escalamiento al CISO.",
+            "Legal es parte del escalamiento posterior, no del proceso de contención. Mientras Legal revisa obligaciones regulatorias, el atacante sigue exfiltrando datos e instalando persistencia en la red.",
           consequence:
-            "En un SOC real, delegar decisiones técnicas de contención a un gerente no técnico resulta en demoras mientras busca aprobación. Cada minuto de demora = más datos exfiltrados y más persistencia instalada.",
+            "En un SOC real, detener la contención para esperar dictamen legal resulta en más datos comprometidos. El DPO puede ser notificado en paralelo, pero la contención técnica no puede esperar.",
         },
       ],
     },
@@ -186,40 +186,40 @@ const scenario: Scenario = {
         {
           id: "a",
           label:
-            "Apagar ws-carlos-01 inmediatamente para cortar la conexión",
-          correct: false,
-          explanation:
-            "El playbook indica obtener imagen forense ANTES de apagar. Apagar destruye evidencia en memoria (RAM) que es crucial para entender el alcance del compromiso.",
-          consequence:
-            "En un SOC real, apagar una workstation comprometida sin forense destruye la memoria volátil que contiene: el keylogger activo, las conexiones C2 en curso, las credenciales robadas en memoria, y los scripts de persistencia.",
-        },
-        {
-          id: "b",
-          label:
             "Aislar la workstation de la red (desconectar del switch / quarantinar VLAN)",
           correct: true,
           explanation:
             "Correcto. El primer paso es aislar la máquina de la red para cortar el movimiento lateral sin destruir evidencia. Se desconecta del switch o se mueve a una VLAN de quarantaine. La imagen forense se toma después.",
         },
         {
-          id: "c",
+          id: "b",
           label:
-            "Cambiar la contraseña de Carlos y seguir observando",
+            "Resetear credenciales de todos los usuarios del dominio antes de hacer anything else",
           correct: false,
           explanation:
-            "Cambiar la contraseña no corta la conexión si el atacante ya tiene persistencia en la máquina. La workstation está comprometida y ejecutando código malicioso. Aislar es la primera prioridad.",
+            "Resetear TODAS las credenciales del dominio es desproporcionado y paralizante. Primero se aisla la máquina comprometida para cortar el acceso activo. Las credenciales se resetean selectivamente después de identificar cuáles están comprometidas.",
           consequence:
-            "En un SOC real, cambiar la contraseña sin aislar la workstation es inútil: el keylogger captura la nueva contraseña inmediatamente, y el atacante sigue controlando la máquina.",
+            "En un SOC real, resetear todas las credenciales del dominio sin aislar primero detiene toda la operación de la empresa. Cientos de usuarios, servicios automatizados, y aplicaciones quedan sin acceso simultáneamente.",
+        },
+        {
+          id: "c",
+          label:
+            "Esperar la aprobación del CISO antes de ejecutar cualquier acción de contención",
+          correct: false,
+          explanation:
+            "El CISO debe ser notificado, pero la contención no requiere su aprobación explícita. El SOC tiene autoridad para contener incidentes activos. Esperar aprobación da tiempo al atacante para exfiltrar más datos.",
+          consequence:
+            "En un SOC real, esperar aprobación ejecutiva para contención básica resulta en demoras de horas. Mientras el CISO revisa el caso, el atacante completa la exfiltración y refuerza la persistencia.",
         },
         {
           id: "d",
           label:
-            "Bloquear la IP 203.0.113.50 en el firewall",
+            "Desplegar un agente de EDR en ws-carlos-01 para monitorear el comportamiento del malware",
           correct: false,
           explanation:
-            "Bloquear la IP de C2 es importante, pero es el paso 3 del protocolo. Primero se aisla la máquina comprometida (paso 1) y luego se busca el alcance (paso 2). Si aislás primero, cortás la exfiltración inmediatamente.",
+            "Desplegar software en una máquina comprometida es arriesgado: el malware puede detectar el agente, evadirlo, o usarlo como vector adicional. Primero se aisla, luego se forensea, y la herramienta de monitoreo se instala en un entorno controlado.",
           consequence:
-            "En un SOC real, bloquear la IP de C2 sin aislar la workstation permite que el malware siga exfiltrando por otros medios: DNS tunneling, HTTPS a otros dominios, o incluso steganografía en imágenes.",
+            "En un SOC real, instalar un agente EDR en una workstation comprometida puede alertar al atacante, provocar que destruya evidencia, o incluso usar el agente como canal de C2 alternativo.",
         },
       ],
     },
@@ -233,15 +233,25 @@ const scenario: Scenario = {
         {
           id: "a",
           label:
-            "Falso positivo — Carlos está haciendo su trabajo normal",
+            "Incidente de severidad media — movimiento lateral controlado sin impacto en datos",
           correct: false,
           explanation:
-            "Carlos es Analista Financiero. No tiene razón técnica para ejecutar PowerShell encoded, conectarse por SMB a srv-db-01, dumphear PostgreSQL, crear un zip de 847MB, y subirlo por HTTPS a una IP externa. Esto NO es su trabajo.",
+            "El atacante hizo dump de PostgreSQL completo, creó un zip de 847MB, y lo exfiltró por HTTPS a una IP externa. Además instaló persistencia con usuarios backdoor, cron jobs, y SSH keys. Esto es severidad CRÍTICA, no media.",
           consequence:
-            "En un SOC real, clasificar movimiento lateral con exfiltración como \"trabajo normal\" de un financiero es un error catastrófico. La base de datos completa de clientes está comprometida y el atacante tiene persistencia en la red.",
+            "En un SOC real, clasificar como media cuando hay exfiltración confirmada resulta en respuesta insuficiente: no se escala a CISO, no se notifica a DPO, y la contención no es prioritaria. Los datos de clientes siguen comprometidos.",
         },
         {
           id: "b",
+          label:
+            "Actividad sospechosa que requiere monitoreo — no hay evidencia de compromiso confirmado",
+          correct: false,
+          explanation:
+            "La evidencia es concluyente: PowerShell encoded + SMB/WMI lateral + dump PostgreSQL + exfiltración HTTPS + creación de usuarios + persistencia. Cada paso es un indicador de compromiso confirmado, no sospecha.",
+          consequence:
+            "En un SOC real, clasificar como 'requiere monitoreo' cuando hay exfiltración activa permite que el atacante complete la operación. Monitorear sin contener esobservar el robo en tiempo real sin intervenir.",
+        },
+        {
+          id: "c",
           label:
             "Positivo verdadero — Compromiso de workstation con movimiento lateral y exfiltración confirmada",
           correct: true,
@@ -249,14 +259,14 @@ const scenario: Scenario = {
             "Correcto. La evidencia es abrumadora: PowerShell encoded → SMB/WMI lateral → dump PostgreSQL → exfiltración HTTPS → creación de usuarios → persistencia. Cada paso es un indicador de compromiso que se encadena en un ataque completo.",
         },
         {
-          id: "c",
+          id: "d",
           label:
-            "Requiere investigación — no sabemos si es un ataque o una migración",
+            "Falso positivo — Carlos está ejecutando una migración de base de datos autorizada",
           correct: false,
           explanation:
-            "Una migración no usa PowerShell encoded, no hace dump de DBs, no crea zips de 847MB, no sube datos a IPs externas, y no crea usuarios backdoor. Los indicadores son claros: esto es malicioso.",
+            "Las migraciones autorizadas usan herramientas oficiales (pg_dump con credenciales de servicio), se ejecutan desde servidores de deploy, no desde workstations, y no usan PowerShell encoded ni crean zips de 847MB para subir a IPs externas.",
           consequence:
-            "En un SOC real, dudar entre \"ataque\" y \"migración\" cuando hay PowerShell encoded + dump de DB + exfiltración + backdoors refleja falta de experiencia. Cada minuto de duda = más datos robados.",
+            "En un SOC real, aceptar la excusa de 'migración' cuando hay PowerShell encoded + IP externa + usuarios backdoor creados permite que el atacante siga operando bajo la cobertura de una actividad supuestamente legítima.",
         },
       ],
     },
@@ -280,20 +290,30 @@ const scenario: Scenario = {
         {
           id: "b",
           label:
-            "Compromiso de ws-carlos-01 (10.10.3.22) con movimiento lateral a srv-db-01 (10.10.5.20). Timeline: 16:35 PowerShell encoded → 16:36 SMB/WMI lateral → 16:37 dump PostgreSQL + exfiltración vía HTTPS a 203.0.113.50. IOC: SHA256 del payload PowerShell, IP C2 (203.0.113.50), dominio evil-cdn.com. Impacto NIVEL 3: posible fuga de datos de clientes de pagos. Acciones ejecutadas: workstation aislada, IP C2 bloqueada, sesiones de Carlos revocadas. Acciones pendientes: imagen forense, forense de srv-db-01, notificación DPO, escalamiento CISO.",
-          correct: true,
-          explanation:
-            "Reporte completo de nivel 3: TIMELINE preciso (minuto a minuto), IOC (IPs, hashes), IMPACTO clasificado, ACCIONES ejecutadas vs pendientes. Este formato permite a cualquier persona entender el incidente y tomar decisiones informadas.",
-        },
-        {
-          id: "c",
-          label:
             "Se movieron cosas por la red y alguien robó datos. Hay que cambiar todas las contraseñas.",
           correct: false,
           explanation:
             "Sin specifics, sin classification de impacto, sin IOC. 'Cambiar todas las contraseñas' no es una acción de contención — es remediación genérica que no aborda la raíz del problema.",
           consequence:
             "En un SOC real, \"cambiar todas las contraseñas\" sin identificar qué credenciales específicamente están comprometidas es inútil: si no cambias la que usa el malware, el atacante sigue teniendo acceso.",
+        },
+        {
+          id: "c",
+          label:
+            "Reporte de incidente: Se detectó movimiento lateral desde workstation de Carlos. Se requiere escalamiento a CISO y notificación a Legal por posible fuga de datos. Se recomienda revisar logs de srv-db-01.",
+          correct: false,
+          explanation:
+            "El reporte menciona el incidente pero carece de evidencia técnica concreta: no incluye IPs, timestamps específicos, hashes, ni la secuencia de eventos. Sin IOC no se puede bloquear al atacante en otros sistemas.",
+          consequence:
+            "En un SOC real, un reporte sin datos técnicos no permite al equipo de contención ejecutar acciones inmediatas. No saben qué IP bloquear, qué usuario desactivar, ni qué servidor aislar.",
+        },
+        {
+          id: "d",
+          label:
+            "Compromiso de ws-carlos-01 (10.10.3.22) con movimiento lateral a srv-db-01 (10.10.5.20). Timeline: 16:35 PowerShell encoded → 16:36 SMB/WMI lateral → 16:37 dump PostgreSQL + exfiltración vía HTTPS a 203.0.113.50. IOC: SHA256 del payload PowerShell, IP C2 (203.0.113.50), dominio evil-cdn.com. Impacto NIVEL 3: posible fuga de datos de clientes de pagos. Acciones ejecutadas: workstation aislada, IP C2 bloqueada, sesiones de Carlos revocadas. Acciones pendientes: imagen forense, forense de srv-db-01, notificación DPO, escalamiento CISO.",
+          correct: true,
+          explanation:
+            "Reporte completo de nivel 3: TIMELINE preciso (minuto a minuto), IOC (IPs, hashes), IMPACTO clasificado, ACCIONES ejecutadas vs pendientes. Este formato permite a cualquier persona entender el incidente y tomar decisiones informadas.",
         },
       ],
     },
@@ -307,20 +327,20 @@ const scenario: Scenario = {
         {
           id: "a",
           label:
+            "Volver al panel de logs para monitorear si hay más activity maliciosa de otras IPs o servidores, mientras el equipo ejecuta la contención",
+          correct: true,
+          explanation:
+            "Correcto. Tu rol como SOC analyst es vigilancia continua. Mientras DevOps contiene y el forense investiga, vos volvés al panel para: detectar si hay más workstations comprometidas, identificar si el atacante tiene otros puntos de acceso, y monitorear si la contención está funcionando.",
+        },
+        {
+          id: "b",
+          label:
             "Cerrar el caso — ya está todo documentado y escalado",
           correct: false,
           explanation:
             "Un incidente nivel 3 nunca se cierra con solo documentar. Hay que seguir monitoreando: ¿hay más workstations comprometidas? ¿el atacante tiene persistencia? ¿hay más exfiltración en curso?",
           consequence:
             "En un SOC real, cerrar un incidente nivel 3 sin verificar remediación completa es negligencia. El atacante podría tener backdoors en srv-db-01, acceso SSH persistente, y cron jobs que recomprometan el sistema cada 24 horas.",
-        },
-        {
-          id: "b",
-          label:
-            "Volver al panel de logs para monitorear si hay más activity maliciosa de otras IPs o servidores, mientras el equipo ejecuta la contención",
-          correct: true,
-          explanation:
-            "Correcto. Tu rol como SOC analyst es vigilancia continua. Mientras DevOps contiene y el forense investiga, vos volvés al panel para: detectar si hay más workstations comprometidas, identificar si el atacante tiene otros puntos de acceso, y monitorear si la contención está funcionando.",
         },
         {
           id: "c",
@@ -331,6 +351,16 @@ const scenario: Scenario = {
             "Como SOC analyst, no deberías manipular evidencia físicamente. Eso es trabajo del equipo forense. Tu rol es análisis de logs, clasificación, y monitoreo continuo.",
           consequence:
             "En un SOC real, tocar la workstation físicamente sin protocolo forense puede alterar timestamps de archivos, contaminar evidencia de huellas digitales, y comprometer la cadena de custodia para uso legal.",
+        },
+        {
+          id: "d",
+          label:
+            "Esperar a que el equipo forense complete su reporte antes de volver a monitorear",
+          correct: false,
+          explanation:
+            "El análisis forense toma horas o días. Mientras esperás, el atacante puede estar instalando persistencia en otros sistemas, moviéndose lateralmente a nuevos servidores, o exfiltrando datos adicionales.",
+          consequence:
+            "En un SOC real, pausar el monitoreo mientras el forense trabaja crea una ventana donde el atacante opera sin vigilancia. El SOC debe mantener monitoreo continuo independientemente del estado del forense.",
         },
       ],
     },

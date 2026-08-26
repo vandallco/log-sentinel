@@ -92,15 +92,25 @@ const scenario: Scenario = {
         {
           id: "a",
           label:
+            "Cache poisoning — alguien está envenenando la cache DNS del servidor",
+          correct: false,
+          explanation:
+            "El cache poisoning implica respuestas DNS falsas. Aquí el servidor está GENERANDO las consultas (queries salientes), no recibiendo respuestas falsas. El tráfico es saliente desde srv-app-01 hacia evil-cdn.com.",
+          consequence:
+            "En un SOC real, confundir DNS tunneling con cache poisoning lleva a bloquear la resolución DNS incorrecta mientras el atacante sigue exfiltrando datos por un canal completamente diferente.",
+        },
+        {
+          id: "b",
+          label:
             "Consultas DNS normales — el servidor está resolviendo CDN para assets",
           correct: false,
           explanation:
             "Los subdominios son strings base64 (aGVsbG8=, cGF5bG9hZA==, etc.), todos apuntan al mismo IP (198.51.100.23) con TTL idéntico (30s). Un CDN real tiene múltiples IPs, TTL variables y subdominios legítimos, no strings codificados.",
           consequence:
-            "En un SOC real, ignorar DNS tunneling como \"tráfico normal\" permite que el atacante siga exfiltrando datos. Cada query DNS es un paquete de información robada: credenciales, tokens, datos financieros.",
+            "En un SOC real, ignorar DNS tunneling como 'tráfico normal' permite que el atacante siga exfiltrando datos. Cada query DNS es un paquete de información robada: credenciales, tokens, datos financieros.",
         },
         {
-          id: "b",
+          id: "c",
           label:
             "DNS tunneling — los subdominios contienen datos codificados en base64 exfiltrados del servidor",
           correct: true,
@@ -108,24 +118,14 @@ const scenario: Scenario = {
             "Correcto. Cada subdominio es base64 decodificable: 'hello world', 'payload.bin', 'token=abc123', 'secret_data', 'card=45...' El patrón de mismo destino, TTL fijo y subdominios con datos codificados es DNS tunneling clásico.",
         },
         {
-          id: "c",
+          id: "d",
           label:
             "Es ruido — solo 28 consultas en 6 minutos no es significativo",
           correct: false,
           explanation:
             "El volumen no es el problema, sino el CONTENIDO. Cada subdominio lleva datos exfiltrados. Con 28 consultas ya se extrajeron: tokens, credenciales, datos de tarjetas de crédito, secrets de API. El daño ya está hecho.",
           consequence:
-            "En un SOC real, subestimar el volumen de exfiltración porque \"solo son 28 consultas\" ignora que cada consulta puede contener cientos de bytes de datos robados. 28 consultas de ~200 bytes = ~5.6KB de datos sensibles filtrados.",
-        },
-        {
-          id: "d",
-          label:
-            "Cache poisoning — alguien está envenenando la cache DNS del servidor",
-          correct: false,
-          explanation:
-            "El cache poisoning implica respuestas DNS falsas. Aquí el servidor está GENERANDO las consultas (queries salientes), no recibiendo respuestas falsas. El tráfico es saliente desde srv-app-01 hacia evil-cdn.com.",
-          consequence:
-            "En un SOC real, confundir DNS tunneling con cache poisoning lleva a bloquear la resolución DNS incorrecta mientras el atacante sigue exfiltrando datos por un canal completamente diferente.",
+            "En un SOC real, subestimar el volumen de exfiltración porque 'solo son 28 consultas' ignora que cada consulta puede contener cientos de bytes de datos robados. 28 consultas de ~200 bytes = ~5.6KB de datos sensibles filtrados.",
         },
       ],
     },
@@ -139,23 +139,33 @@ const scenario: Scenario = {
         {
           id: "a",
           label:
-            "Lucía Fernández (Desarrolladora Backend — VLAN 20 Dev)",
-          correct: false,
-          explanation:
-            "Lucía desarrolla en srv-app-01 pero no tiene permisos de SysAdmin. Podría ayudar a entender qué procesos de la app podrían haber generado el tráfico, pero no es la primera línea de respuesta.",
-          consequence:
-            "En un SOC real, asignar el incidente a un desarrollador que no tiene experiencia en seguridad retrasa la contención. Ella podría Help entender la aplicación, pero no tiene las herramientas ni el conocimiento para bloquear el dominio o aislar el servidor.",
-        },
-        {
-          id: "b",
-          label:
             "Ana Martínez (DevOps Engineer — VLAN 10 Admin)",
           correct: true,
           explanation:
             "Correcto. Ana es DevOps en VLAN 10 Admin con acceso a srv-app-01. Ella puede investigar procesos, revisar crontabs, revisar la configuración de DNS y ejecutar la contención técnica (bloquear el dominio, aislar el servidor).",
         },
         {
+          id: "b",
+          label:
+            "Lucía Fernández (Desarrolladora Backend — VLAN 20 Dev)",
+          correct: false,
+          explanation:
+            "Lucía desarrolla en srv-app-01 pero no tiene permisos de SysAdmin. Podría ayudar a entender qué procesos de la app podrían haber generado el tráfico, pero no es la primera línea de respuesta.",
+          consequence:
+            "En un SOC real, asignar el incidente a un desarrollador que no tiene experiencia en seguridad retrasa la contención. Ella podría ayudar a entender la aplicación, pero no tiene las herramientas ni el conocimiento para bloquear el dominio o aislar el servidor.",
+        },
+        {
           id: "c",
+          label:
+            "Martín González (SysAdmin Senior — VLAN 10 Admin)",
+          correct: false,
+          explanation:
+            "Martín tiene acceso administrativo, pero su especialidad es infraestructura, no seguridad. Ana (DevOps) está mejor posicionada porque entiende tanto la infraestructura como la aplicación, y puede ejecutar la contención más rápidamente.",
+          consequence:
+            "En un SOC real, asignar a un SysAdmin en lugar de DevOps para un incidente en una aplicación puede resultar en tiempos de respuesta más lentos. El SysAdmin puede bloquear el dominio, pero no sabe qué procesos de la app están generando el tráfico malicioso.",
+        },
+        {
+          id: "d",
           label:
             "Carlos Ruiz (Analista Financiero — VLAN 30 Corp)",
           correct: false,
@@ -163,16 +173,6 @@ const scenario: Scenario = {
             "Carlos no tiene acceso técnico a srv-app-01 ni conocimiento de infraestructura. Su involvement sería solo si se confirma que datos financieros fueron exfiltrados.",
           consequence:
             "En un SOC real, asignar un incidente de exfiltración a un analista financiero sin acceso técnico genera cuellos de botella. Carlos no puede bloquear el dominio ni revisar procesos del servidor.",
-        },
-        {
-          id: "d",
-          label:
-            "El equipo de marketing",
-          correct: false,
-          explanation:
-            "El marketing no tiene ninguna relación con la infraestructura técnica ni la seguridad de servidores.",
-          consequence:
-            "En un SOC real, asignar un incidente de seguridad al equipo de marketing es un error que refleja falta de comprensión de roles. El marketing no puede ejecutar ninguna acción de contención.",
         },
       ],
     },
@@ -185,40 +185,40 @@ const scenario: Scenario = {
       options: [
         {
           id: "a",
-          label: "Apagar el servidor inmediatamente",
+          label:
+            "Bloquear inmediatamente todas las consultas DNS del servidor en el firewall",
           correct: false,
           explanation:
-            "Apagar srv-app-01 cortaría el servicio de pagos. El playbook prioriza contención quirúrgica (bloquear el dominio DNS) antes de medidas drásticas que afecten la disponibilidad.",
+            "Bloquear todo el DNS del servidor cortaría la resolución de dominios legítimos que la aplicación necesita para funcionar (google.com, github.com, etc.). La contención debe ser quirúrgica: solo bloquear evil-cdn.com.",
           consequence:
-            "En un SOC real, apagar un servidor de pagos en producción causa pérdidas financieras directas por cada minuto de downtime, plus daño reputacional con clientes que dependen del servicio.",
+            "En un SOC real, bloquear todo el tráfico DNS de un servidor de producción causa downtime inmediato. La aplicación no puede resolver dominios de APIs externas, certificados SSL, o dependencias, resultando en caída del servicio de pagos.",
         },
         {
           id: "b",
-          label:
-            "Calcular el volumen de consultas y el tamaño estimado de datos exfiltrados",
-          correct: true,
+          label: "Reiniciar el servidor para limpiar cualquier proceso malicioso en memoria",
+          correct: false,
           explanation:
-            "Correcto. Antes de actuar, necesitás entender la magnitud: ¿cuántos datos se fueron? ¿Qué tipo de datos? Esto determina la severidad del incidente y si hay que notificar a clientes/reguladores.",
+            "Reiniciar elimina procesos en memoria pero no la persistencia (crontab, systemd services, .bashrc). Además, si el malware tiene persistencia, se relanzará automáticamente después del reinicio.",
+          consequence:
+            "En un SOC real, reiniciar un servidor sin antes aislar la persistencia es como apagar y prender una computadora con un virus: el malware vuelve a cargarse. Además, se pierde evidencia volátil (memoria, conexiones activas) que es crítica para el forense.",
         },
         {
           id: "c",
-          label:
-            "Ignorar las consultas DNS — son solo 28 queries",
-          correct: false,
-          explanation:
-            "28 consultas que contienen tokens, datos de tarjetas y credenciales NO es ruido. Cada query es un paquete de datos robados.",
-          consequence:
-            "En un SOC real, ignorar exfiltración activa porque \"no es significativo\" permite que el atacante robe suficientes datos para causar brechas de datos que requieren notificación regulatoria a miles de clientes.",
-        },
-        {
-          id: "d",
           label:
             "Cambiar la contraseña de root del servidor",
           correct: false,
           explanation:
             "La contraseña de root no tiene relación directa con el DNS tunneling. El malware/exfiltrador tiene su propio mecanismo de comunicación. Cambiar la contraseña no detiene la fuga.",
           consequence:
-            "En un SOC real, cambiar la contraseña de root sin aislar el dominio malicioso es como cerrar la puerta principal mientras el ladrón sale por la ventana. La exfiltración continúa por DNS mientras \"solucionás\" un problema que no existe.",
+            "En un SOC real, cambiar la contraseña de root sin aislar el dominio malicioso es como cerrar la puerta principal mientras el ladrón sale por la ventana. La exfiltración continúa por DNS mientras 'solucionás' un problema que no existe.",
+        },
+        {
+          id: "d",
+          label:
+            "Calcular el volumen de consultas y el tamaño estimado de datos exfiltrados",
+          correct: true,
+          explanation:
+            "Correcto. Antes de actuar, necesitás entender la magnitud: ¿cuántos datos se fueron? ¿Qué tipo de datos? Esto determina la severidad del incidente y si hay que notificar a clientes/reguladores.",
         },
       ],
     },
@@ -257,6 +257,16 @@ const scenario: Scenario = {
           consequence:
             "En un SOC real, pedir \"más análisis\" cuando la evidencia es clara retrasa la notificación a reguladores. El GDPR y similares requieren notificación dentro de 72 horas de confirmar la brecha.",
         },
+        {
+          id: "d",
+          label:
+            "Positivo verdadero — pero solo es malware de cryptominería, no exfiltración de datos",
+          correct: false,
+          explanation:
+            "Los subdominios contienen datos decodificables (tokens, cards, credenciales), no hashes de minado. Cryptominería usa protocolos diferentes (no DNS tunneling de datos codificados en base64). La evidencia es claramente exfiltración, no minado.",
+          consequence:
+            "En un SOC real, clasificar exfiltración como cryptominería lleva a prioridad incorrecta. El DPO no es notificado, los clientes no son alertados, y la ventana de notificación regulatoria (72h GDPR) se pierde porque se cree que es 'solo minado'.",
+        },
       ],
     },
     {
@@ -269,30 +279,40 @@ const scenario: Scenario = {
         {
           id: "a",
           label:
-            "Se encontró tráfico DNS raro en srv-app-01. Revisar el servidor.",
-          correct: false,
-          explanation:
-            "Sin datos técnicos, sin IP de destino, sin descripción del patrón, sin impacto. Un reporte vacío que no permite ni escalamiento ni forense.",
-          consequence:
-            "En un SOC real, un reporte sin datos técnicos no permite al equipo de contención ejecutar acciones. No saben qué dominio bloquear, qué servidor revisar, ni qué datos pudieron ser comprometidos.",
-        },
-        {
-          id: "b",
-          label:
             "Exfiltración de datos vía DNS tunneling desde srv-app-01 hacia evil-cdn.com (198.51.100.23). 28 consultas DNS con subdominios base64 conteniendo: tokens de sesión, datos de tarjetas de crédito (parciales), y credenciales. Activity detectada entre 14:10–14:15 UTC. Dominio no registrado en asset inventory. Impacto: posible compromiso de datos de clientes de pagos. Acciones: bloquear evil-cdn.com en DNS, revisar procesos en srv-app-01, forense completo, notificar a DPO si se confirma fuga de datos personales.",
           correct: true,
           explanation:
             "Reporte completo: QUÉ (DNS tunneling), DESDE DÓNDE (srv-app-01 → evil-cdn.com), QUÉ DATOS (tokens, cards, credenciales), CUÁNDO, IMPACTO (datos de clientes), y ACCIONES (contención + forense + notificación regulatoria). Formato profesional SOC.",
         },
         {
-          id: "c",
+          id: "b",
           label:
-            "El servidor fue hackeado y están robando información por DNS. Hay que apagarlo.",
+            "Se detectó activity anómala en srv-app-01. Las consultas DNS hacia evil-cdn.com parecen sospechosas. Se requiere investigación adicional para determinar el impacto y las acciones correctivas.",
           correct: false,
           explanation:
-            "Lenguaje alarmista sin datos. \'Hackeado\' no es descriptivo. \'Apagarlo\' no es una acción de contención apropiada para un servidor de pagos en producción.",
+            "Este reporte no menciona IP de destino, volumen de datos, tipo de datos exfiltrados, ni timeline específico. Un reporte así no permite escalamiento ni forense porque no hay datos accionables.",
           consequence:
-            "En un SOC real, reportes alarmistas sin datos generan pánico en management que lleva a decisiones erróneas: apagar servidores críticos, contactar clientes innecesariamente, o ignorar la evidencia real porque \"exageran\".",
+            "En un SOC real, un reporte sin datos técnicos no permite al equipo de contención ejecutar acciones. No saben qué dominio bloquear, qué datos pudieron ser comprometidos, ni qué clientes afectar. La investigación se retrasa porque falta información básica.",
+        },
+        {
+          id: "c",
+          label:
+            "Servidor srv-app-01 comprometido vía DNS tunneling. Datos exfiltrados incluyen tokens y credenciales. Acción inmediata requerida.",
+          correct: false,
+          explanation:
+            "Falta IP de destino, volumen exacto, timeline, y plan de acción específico. Un reporte tan breve no cumple con los requisitos de documentación SOC y no puede usarse para notificación regulatoria.",
+          consequence:
+            "En un SOC real, reportes breves sin evidencia específica generan confusión. El equipo de contención no sabe qué dominio bloquear, el management no entiende la gravedad, y en auditoría no hay evidencia documentada del incidente.",
+        },
+        {
+          id: "d",
+          label:
+            "Incidente de seguridad clasificado como positivo verdadero. Se requiere reunión de emergencia con CISO, Legal y DPO para evaluar impacto regulatorio.",
+          correct: false,
+          explanation:
+            "El reporte técnico debe completarse ANTES de la reunión ejecutiva. Sin datos técnicos (IP, timeline, datos afectados), la reunión no tiene base para decisiones informadas sobre contención ni notificación.",
+          consequence:
+            "En un SOC real, convocar reunión ejecutiva sin reporte técnico completo resulta en una reunión sin datos. El CISO no puede tomar decisiones informadas y la contención se retrasa mientras se discuten planes de acción genéricos.",
         },
       ],
     },
@@ -306,15 +326,25 @@ const scenario: Scenario = {
         {
           id: "a",
           label:
-            "Volver al panel y no hacer nada más — el reporte es suficiente",
+            "Volver al panel y seguir monitoreando nuevas alertas sin escalar a nadie",
           correct: false,
           explanation:
-            "Un reporte sin seguimiento no sirve. Necesitás verificar que las acciones de contención se ejecuten y que el forense inicie.",
+            "Monitorear sin escalar significa que la contención nunca se ejecuta. El escalamiento es parte del flujo SOC: detectar → clasificar → escalar → contener.",
           consequence:
-            "En un SOC real, no dar seguimiento a exfiltración activa significa que el dominio malicioso sigue resolviendo y los datos siguen saliendo. Cada hora sin bloquear = más datos robados.",
+            "En un SOC real, no escalar a DevOps para la contención significa que evil-cdn.com sigue resolviendo y los datos siguen saliendo. Cada hora sin bloquear = más datos robados. El monitoreo passivo no detiene la exfiltración activa.",
         },
         {
           id: "b",
+          label:
+            "Contactar al equipo de desarrollo por Slack para que revisen el servidor",
+          correct: false,
+          explanation:
+            "Slack no es un canal de escalamiento válido para incidentes de seguridad. No tiene audit trail, puede no llegar a la persona correcta, y no registra en el sistema de tickets designado para incidentes.",
+          consequence:
+            "En un SOC real, escalar por Slack significa que el DevOps podría no ver la alerta por horas. Mientras tanto, el atacante sigue exfiltrando. Sin registro en el sistema de tickets, no hay evidencia de cuándo se escaló ni quién fue notificado.",
+        },
+        {
+          id: "c",
           label:
             "Escalar a Ana para la contención técnica y volver al panel de logs para seguir monitoreando",
           correct: true,
@@ -322,14 +352,14 @@ const scenario: Scenario = {
             "Correcto. Escalás a Ana (DevOps) para bloquear el dominio, revisar procesos y aislar el servidor. Mientras ella ejecuta la contención, volvés al panel para detectar si hay más activity maliciosa o alertas pendientes.",
         },
         {
-          id: "c",
+          id: "d",
           label:
-            "Borrar los logs del servidor para que el atacante no se dé cuenta",
+            "Crear un ticket en Jira con prioridad baja y esperar a que alguien lo tome en la próxima sprint",
           correct: false,
           explanation:
-            "Destruir evidencia es una falta grave. Los logs son evidencia forense y necesarios para entender el alcance del compromiso. Nunca se borran logs de un incidente.",
+            "Exfiltración activa requiere respuesta inmediata, no cola de tickets con prioridad baja. La prioridad debe ser crítica/alta y la asignación debe ser directa a Ana.",
           consequence:
-            "En un SOC real, borrar logs de un incidente de exfiltración destruye la única evidencia de qué datos fueron robados. Sin logs, no puedes determinar qué clientes fueron afectados ni cumplir con las obligaciones de notificación regulatoria.",
+            "En un SOC real, crear ticket con prioridad baja para exfiltración activa resulta en que el ticket se atienda en días, no horas. Los datos siguen saliendo mientras el ticket espera en la cola de la sprint.",
         },
       ],
     },
