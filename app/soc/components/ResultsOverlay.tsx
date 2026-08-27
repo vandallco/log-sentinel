@@ -10,7 +10,7 @@ export default function ResultsOverlay({ score, total, scenario, answers, onBack
 }) {
   const [showSteps, setShowSteps] = useState(false);
   const pct = Math.round((score / total) * 100);
-  const grade = pct === 100 ? { label: "EXCELENTE", color: "var(--ok)", icon: "🏆" } : pct >= 60 ? { label: "BUENO", color: "var(--accent)", icon: "✓" } : { label: "NECESITA MEJORA", color: "var(--high)", icon: "📚" };
+  const grade = pct === 100 ? { label: "EXCELENTE", color: "var(--soc-ok)", icon: "🏆" } : pct >= 60 ? { label: "BUENO", color: "var(--soc-accent)", icon: "✓" } : { label: "NECESITA MEJORA", color: "var(--soc-high)", icon: "📚" };
 
   useEffect(() => { setTimeout(() => setShowSteps(true), 400); }, []);
 

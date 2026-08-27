@@ -2,22 +2,44 @@
   --soc-bg: #06090f;
   --soc-panel: #0c1219;
   --soc-card: #111821;
-  --soc-border: #1e2a38;
-  --soc-text: #e2e8f0;
-  --soc-muted: #7a8ba0;
+  --soc-border: #26344a;
+  --soc-text: #eef2f7;
+  --soc-muted: #9db0c4;
   --soc-accent: #22d3ee;
-  --soc-critical: #ef4444;
-  --soc-high: #f97316;
-  --soc-medium: #eab308;
-  --soc-low: #3b82f6;
-  --soc-ok: #22c55e;
+  --soc-critical: #f87171;
+  --soc-high: #fb923c;
+  --soc-medium: #fbbf24;
+  --soc-low: #60a5fa;
+  --soc-ok: #4ade80;
+
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.25);
 }
 
 .soc {
   min-height: 100vh;
   background: var(--soc-bg);
   color: var(--soc-text);
-  font-family: ui-monospace, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  font-family: var(--font-ui);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+.step-counter,
+.scenario-source,
+.log-line,
+.log-panel-count {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── HEADER ── */
@@ -183,6 +205,7 @@
   font-size: 0.68rem;
   font-weight: 600;
   margin: 0.15rem 0;
+  font-family: var(--font-mono);
 }
 
 .company-notes {
@@ -248,6 +271,9 @@
   transition: all 0.2s;
   border-left: 4px solid transparent;
   position: relative;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
 }
 
 .scenario-card:hover {
@@ -284,17 +310,17 @@
 }
 
 .severity-badge.critical {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(248, 113, 113, 0.15);
   color: var(--soc-critical);
 }
 
 .severity-badge.high {
-  background: rgba(249, 115, 22, 0.15);
+  background: rgba(251, 146, 60, 0.15);
   color: var(--soc-high);
 }
 
 .severity-badge.medium {
-  background: rgba(234, 179, 8, 0.15);
+  background: rgba(251, 191, 36, 0.15);
   color: var(--soc-medium);
 }
 
@@ -460,13 +486,13 @@
 }
 
 .progress-step.done .progress-step-number {
-  background: rgba(34, 197, 94, 0.2);
+  background: rgba(74, 222, 128, 0.2);
   color: var(--soc-ok);
   border-color: var(--soc-ok);
 }
 
 .progress-step.wrong .progress-step-number {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(248, 113, 113, 0.2);
   color: var(--soc-critical);
   border-color: var(--soc-critical);
 }
@@ -548,8 +574,8 @@
 .step-hint {
   font-size: 0.68rem;
   color: var(--soc-medium);
-  background: rgba(234, 179, 8, 0.08);
-  border: 1px solid rgba(234, 179, 8, 0.2);
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
   border-radius: 6px;
   padding: 0.5rem 0.75rem;
   margin-bottom: 1rem;
@@ -615,12 +641,12 @@
 
 .step-option.correct {
   border-color: var(--soc-ok);
-  background: rgba(34, 197, 94, 0.08);
+  background: rgba(74, 222, 128, 0.08);
 }
 
 .step-option.wrong {
   border-color: var(--soc-critical);
-  background: rgba(239, 68, 68, 0.08);
+  background: rgba(248, 113, 113, 0.08);
 }
 
 .step-option-letter {
@@ -679,15 +705,15 @@
 }
 
 .step-option-explanation.correct {
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(74, 222, 128, 0.1);
   color: var(--soc-ok);
-  border: 1px solid rgba(34, 197, 94, 0.25);
+  border: 1px solid rgba(74, 222, 128, 0.25);
 }
 
 .step-option-explanation.wrong {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(248, 113, 113, 0.1);
   color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(248, 113, 113, 0.25);
 }
 
 /* ── PLAYBOOK PANEL ── */
@@ -710,7 +736,7 @@
 
 .playbook-entry {
   padding: 0.75rem 0.85rem;
-  border-bottom: 1px solid rgba(30, 42, 56, 0.4);
+  border-bottom: 1px solid rgba(38, 52, 74, 0.4);
 }
 
 .playbook-entry:last-child {
@@ -746,7 +772,7 @@
 }
 
 .playbook-content {
-  font-family: inherit;
+  font-family: var(--font-mono);
   font-size: 0.63rem;
   color: var(--soc-muted);
   line-height: 1.6;
@@ -784,7 +810,7 @@
 
 .keyboard-hint kbd {
   display: inline-block;
-  font-family: inherit;
+  font-family: var(--font-mono);
   font-size: 0.58rem;
   font-weight: 700;
   background: var(--soc-card);
@@ -1023,6 +1049,7 @@
   font-size: 0.6rem;
   color: var(--soc-accent);
   font-weight: 600;
+  font-family: var(--font-mono);
 }
 
 /* ── LOG ENTRIES ── */
@@ -1068,8 +1095,10 @@
 
 .log-entry {
   padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid rgba(30, 42, 56, 0.5);
+  border-bottom: 1px solid rgba(38, 52, 74, 0.5);
   font-size: 0.68rem;
+  font-family: var(--font-mono);
+  line-height: 1.45;
   transition: background 0.1s;
 }
 
@@ -1087,7 +1116,7 @@
 }
 
 .log-entry.flagged {
-  background: rgba(239, 68, 68, 0.04);
+  background: rgba(248, 113, 113, 0.04);
   border-left: 3px solid var(--soc-critical);
 }
 
@@ -1135,7 +1164,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(248, 113, 113, 0.2);
   color: var(--soc-critical);
   font-size: 0.55rem;
   font-weight: 800;
@@ -1561,8 +1590,8 @@
   gap: 0.75rem;
   margin-top: 0.75rem;
   padding: 0.75rem;
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.25);
   border-radius: 8px;
   animation: slideUp 0.3s ease-out;
 }
@@ -1623,7 +1652,7 @@
 .results-step-consequence {
   margin-top: 0.4rem;
   padding: 0.5rem;
-  background: rgba(239, 68, 68, 0.08);
+  background: rgba(248, 113, 113, 0.08);
   border-radius: 5px;
   font-size: 0.6rem;
   line-height: 1.5;
